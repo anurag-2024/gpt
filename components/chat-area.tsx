@@ -28,6 +28,7 @@ interface ChatAreaProps {
   conversationId?: string | null
   conversationTitle?: string
   onDeleteConversation?: (conversationId: string) => void
+  userName?: string
 }
 
 export function ChatArea({ 
@@ -40,7 +41,8 @@ export function ChatArea({
   currentBranchIndices,
   conversationId,
   conversationTitle,
-  onDeleteConversation
+  onDeleteConversation,
+  userName
 }: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -137,14 +139,7 @@ export function ChatArea({
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-8">
-        {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
-            <h1 className="text-3xl font-bold text-foreground">How can I help you today?</h1>
-            <p className="text-muted-foreground">Start a conversation or ask me anything</p>
-          </div>
-        ) : (
-          <>
-            {messages.map((message, index) => {
+          {messages.map((message, index) => {
               // Find the last user message
               const userMessages = messages.filter(m => m.role === 'user')
               const isLastUserMessage = message.role === 'user' && 
@@ -189,25 +184,23 @@ export function ChatArea({
                 </div>
               </div>
             )}
-          </>
-        )}
-        <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
-      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        title="Delete chat?"
-        description="This will delete"
-        highlightedText={conversationTitle || "New chat"}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="destructive"
-        showSettingsLink={true}
-      />
-    </div>
-  )
-}
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          title="Delete chat?"
+          description="This will delete"
+          highlightedText={conversationTitle || "New chat"}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="destructive"
+          showSettingsLink={true}
+        />
+      </div>
+    )
+  }

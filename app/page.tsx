@@ -38,6 +38,19 @@ export default function Home() {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true)
   const [currentBranchIndices, setCurrentBranchIndices] = useState<Map<string, number>>(new Map())
   const [isEditingResponse, setIsEditingResponse] = useState(false)
+  const [welcomeMessage, setWelcomeMessage] = useState("")
+
+  // Welcome messages array
+  const getWelcomeMessages = (userName?: string | null) => [
+    "What are you working on?",
+    "Ready when you are.",
+    "Where should we begin?",
+    "What's on your mind today?",
+    "What's on the agenda today?",
+    userName ? `Good to see you, ${userName}.` : "Good to see you.",
+    userName ? `How can I help, ${userName}?` : "How can I help?",
+    userName ? `Hey, ${userName}. Ready to dive in?` : "Hey. Ready to dive in?",
+  ]
 
   // Vercel AI SDK useChat hook for streaming
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append, reload } = useChat({
@@ -64,6 +77,16 @@ export default function Home() {
       loadConversations()
     },
   })
+
+  // Select a random welcome message when there are no messages
+  useEffect(() => {
+    if (messages.length === 0) {
+      const userName = user?.firstName || user?.username
+      const welcomeMessages = getWelcomeMessages(userName)
+      const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
+      setWelcomeMessage(welcomeMessages[randomIndex])
+    }
+  }, [messages.length, user?.firstName, user?.username])
 
   // Load conversations on mount and from URL
   useEffect(() => {
@@ -104,6 +127,7 @@ export default function Home() {
 
     try {
       let conversationIdToUse = currentConversationId
+      const isNewConversation = !conversationIdToUse
 
       // If no current conversation, create one first
       if (!conversationIdToUse) {
@@ -137,57 +161,149 @@ export default function Home() {
       console.log("Appending message to chat with conversationId:", conversationIdToUse)
       console.log("Files to attach:", files?.length || 0)
       
-      // Store current messages count to identify the new message
-      const currentMessagesCount = messages.length
-      
-      // For Vercel AI SDK, experimental_attachments should only be included if there are files
-      const messageToSend: any = {
-        role: "user",
-        content: messageContent,
-      }
-      
-      // Only add experimental_attachments if we have files
-      if (files && files.length > 0) {
-        messageToSend.experimental_attachments = files.map(file => ({
-          url: file.url,
-          name: file.name,
-          contentType: file.type,
-        }))
-        console.log("Adding attachments:", messageToSend.experimental_attachments)
-      }
-      
-      console.log("Message to send:", JSON.stringify(messageToSend, null, 2))
-      
-      // Use append to send the message with experimental_attachments for images
-      // The conversationId will be sent via the body parameter in useChat
-      // Also send files in body as backup
-      await append(messageToSend, {
-        body: {
-          conversationId: conversationIdToUse,
-          files: fileAttachments, // Send files in body as well
+      // For new conversations, we need to call the API directly because useChat isn't initialized yet
+      if (isNewConversation) {
+        // Add user message to UI immediately
+        const userMessage = {
+          id: `temp-user-${Date.now()}`,
+          role: 'user' as const,
+          content: messageContent,
+          createdAt: new Date(),
+          files: fileAttachments.length > 0 ? fileAttachments : undefined,
         }
-      })
-      
-      // After append, manually add files to the user message in the state
-      // This ensures files are displayed immediately
-      if (fileAttachments.length > 0) {
-        setTimeout(() => {
-          setMessages((prevMessages) => {
-            const updatedMessages = [...prevMessages]
-            // Find the user message we just added (it should be at currentMessagesCount index)
-            if (updatedMessages[currentMessagesCount]) {
-              updatedMessages[currentMessagesCount] = {
-                ...updatedMessages[currentMessagesCount],
-                files: fileAttachments,
-              } as any
+        setMessages([userMessage])
+        
+        // Set loading state to show typing indicator
+        setIsEditingResponse(true)
+
+        // Call chat API directly
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: messageContent }],
+            conversationId: conversationIdToUse,
+            files: fileAttachments,
+          }),
+        })
+
+        if (!response.ok) {
+          setIsEditingResponse(false)
+          throw new Error('Failed to get AI response')
+        }
+
+        // Handle streaming response
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let assistantMessage = ''
+        const assistantMsgId = `temp-assistant-${Date.now()}`
+        let hasStartedStreaming = false
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('0:')) {
+                try {
+                  const jsonStr = line.substring(2).trim()
+                  if (jsonStr) {
+                    const parsed = JSON.parse(jsonStr)
+                    if (parsed.content) {
+                      assistantMessage += parsed.content
+                      
+                      // Hide typing indicator once we start receiving content
+                      if (!hasStartedStreaming) {
+                        setIsEditingResponse(false)
+                        hasStartedStreaming = true
+                      }
+                      
+                      // Update UI with streaming response in chunks
+                      setMessages([
+                        userMessage,
+                        {
+                          id: assistantMsgId,
+                          role: 'assistant' as const,
+                          content: assistantMessage,
+                          createdAt: new Date(),
+                        }
+                      ])
+                    }
+                  }
+                } catch (e) {
+                  // Ignore JSON parse errors for incomplete chunks
+                }
+              }
             }
-            return updatedMessages
-          })
-        }, 100)
+          }
+        }
+        
+        // Clear loading state
+        setIsEditingResponse(false)
+
+        // Reload conversation to get the real message IDs
+        if (conversationIdToUse) {
+          setTimeout(() => handleSelectConversation(conversationIdToUse), 500)
+        }
+      } else {
+        // Existing conversation - use append as before
+        const currentMessagesCount = messages.length
+        
+        // For Vercel AI SDK, experimental_attachments should only be included if there are files
+        const messageToSend: any = {
+          role: "user",
+          content: messageContent,
+        }
+        
+        // Only add experimental_attachments if we have files
+        if (files && files.length > 0) {
+          messageToSend.experimental_attachments = files.map(file => ({
+            url: file.url,
+            name: file.name,
+            contentType: file.type,
+          }))
+          console.log("Adding attachments:", messageToSend.experimental_attachments)
+        }
+        
+        console.log("Message to send:", JSON.stringify(messageToSend, null, 2))
+        
+        // Use append to send the message with experimental_attachments for images
+        // The conversationId will be sent via the body parameter in useChat
+        // Also send files in body as backup
+        await append(messageToSend, {
+          body: {
+            conversationId: conversationIdToUse,
+            files: fileAttachments, // Send files in body as well
+          }
+        })
+        
+        // After append, manually add files to the user message in the state
+        // This ensures files are displayed immediately
+        if (fileAttachments.length > 0) {
+          setTimeout(() => {
+            setMessages((prevMessages) => {
+              const updatedMessages = [...prevMessages]
+              // Find the user message we just added (it should be at currentMessagesCount index)
+              if (updatedMessages[currentMessagesCount]) {
+                updatedMessages[currentMessagesCount] = {
+                  ...updatedMessages[currentMessagesCount],
+                  files: fileAttachments,
+                } as any
+              }
+              return updatedMessages
+            })
+          }, 100)
+        }
       }
       
       console.log("Message sent successfully")
     } catch (error) {
+      // Clear loading state on error
+      setIsEditingResponse(false)
       toast.error("Failed to send message")
       console.error("Send message error:", error)
     }
@@ -643,19 +759,37 @@ export default function Home() {
         }}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <ChatArea 
-          messages={messages} 
-          isLoading={isLoading || isEditingResponse}
-          onEditMessage={handleEditMessage}
-          onRegenerateResponse={handleRegenerateResponse}
-          onPreviousBranch={handlePreviousBranch}
-          onNextBranch={handleNextBranch}
-          currentBranchIndices={currentBranchIndices}
-          conversationId={currentConversationId}
-          conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
-          onDeleteConversation={handleDeleteConversation}
-        />
-        <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+        {messages.length === 0 ? (
+          /* Empty state - centered welcome with input */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-full max-w-3xl px-4">
+              <div className="text-center mb-8">
+                <h1 className="text-[32px] font-medium text-foreground mb-0 tracking-tight">
+                  {welcomeMessage || "Ready when you are."}
+                </h1>
+              </div>
+              <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+            </div>
+          </div>
+        ) : (
+          /* Chat mode - input at bottom */
+          <>
+            <ChatArea 
+              messages={messages} 
+              isLoading={isLoading || isEditingResponse}
+              onEditMessage={handleEditMessage}
+              onRegenerateResponse={handleRegenerateResponse}
+              onPreviousBranch={handlePreviousBranch}
+              onNextBranch={handleNextBranch}
+              currentBranchIndices={currentBranchIndices}
+              conversationId={currentConversationId}
+              conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
+              onDeleteConversation={handleDeleteConversation}
+              userName={user?.firstName || user?.username || undefined}
+            />
+            <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+          </>
+        )}
       </div>
     </div>
   )
