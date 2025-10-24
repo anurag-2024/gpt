@@ -1,8 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { MessageBubble } from "./message-bubble"
 import { TypingIndicator } from "./typing-indicator"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MoreHorizontal, Share2, Archive, Flag, Trash2 } from "lucide-react"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { toast } from "sonner"
 import type { Message as UIMessage } from "ai/react"
 
 interface ExtendedMessage extends UIMessage {
@@ -20,10 +25,25 @@ interface ChatAreaProps {
   onPreviousBranch?: (pairId: string) => void
   onNextBranch?: (pairId: string, totalBranches: number) => void
   currentBranchIndices?: Map<string, number>
+  conversationId?: string | null
+  conversationTitle?: string
+  onDeleteConversation?: (conversationId: string) => void
 }
 
-export function ChatArea({ messages, isLoading = false, onEditMessage, onRegenerateResponse, onPreviousBranch, onNextBranch, currentBranchIndices }: ChatAreaProps) {
+export function ChatArea({ 
+  messages, 
+  isLoading = false, 
+  onEditMessage, 
+  onRegenerateResponse, 
+  onPreviousBranch, 
+  onNextBranch, 
+  currentBranchIndices,
+  conversationId,
+  conversationTitle,
+  onDeleteConversation
+}: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -33,9 +53,90 @@ export function ChatArea({ messages, isLoading = false, onEditMessage, onRegener
     scrollToBottom()
   }, [messages, isLoading])
 
+  const handleShare = () => {
+    if (conversationId) {
+      const shareUrl = `${window.location.origin}?c=${conversationId}`
+      navigator.clipboard.writeText(shareUrl)
+      toast.success("Link copied to clipboard!")
+    } else {
+      toast.error("No conversation to share")
+    }
+  }
+
+  const handleArchive = () => {
+    toast.info("Archive feature coming soon!")
+  }
+
+  const handleReport = () => {
+    toast.info("Report feature coming soon!")
+  }
+
+  const handleDeleteClick = () => {
+    if (conversationId) {
+      setDeleteDialogOpen(true)
+    }
+  }
+
+  const handleDeleteConfirm = () => {
+    if (conversationId) {
+      onDeleteConversation?.(conversationId)
+      toast.success("Conversation deleted")
+    }
+    setDeleteDialogOpen(false)
+  }
+
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
+    <div className="flex-1 overflow-y-auto bg-background flex flex-col">
+      {/* Top Bar with Share and Menu - Only show when there's a conversation */}
+      {conversationId && messages.length > 0 && (
+        <div className="sticky top-0 z-10 bg-background backdrop-blur-sm border-b border-border/20">
+          <div className="w-full px-4 py-2 flex items-center justify-end">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground hover:text-foreground hover:bg-white/5"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm">Share</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleArchive} className="gap-2">
+                    <Archive className="h-4 w-4" />
+                    Archive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReport} className="gap-2">
+                    <Flag className="h-4 w-4" />
+                    Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDeleteClick} 
+                    className="gap-2 text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-8">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
             <h1 className="text-3xl font-bold text-foreground">How can I help you today?</h1>
@@ -91,7 +192,20 @@ export function ChatArea({ messages, isLoading = false, onEditMessage, onRegener
           </>
         )}
         <div ref={messagesEndRef} />
+        </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Conversation"
+        description="Are you sure you want to delete this conversation? This action cannot be undone and all messages will be permanently deleted."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   )
 }

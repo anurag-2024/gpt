@@ -123,7 +123,7 @@ export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps
   }
 
   return (
-    <div className="border-t border-border bg-background px-4 py-4">
+    <div className="bg-background px-4 py-6">
       <div className="mx-auto max-w-3xl">
         {/* File Preview Section */}
         {uploadedFiles.length > 0 && (
@@ -131,7 +131,7 @@ export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps
             {uploadedFiles.map((file) => (
               <div
                 key={file.id}
-                className="relative flex items-center gap-2 rounded-lg border border-border bg-card p-2"
+                className="relative flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-2"
               >
                 {file.preview ? (
                   <img
@@ -164,66 +164,90 @@ export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps
           </div>
         )}
 
-        {/* Input Area */}
-        <div className="flex gap-3 rounded-lg border border-border bg-card p-3">
-          {/* File Upload */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-            accept="image/*,.pdf,.doc,.docx,.txt"
-            suppressHydrationWarning
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            suppressHydrationWarning
-          >
-            <Paperclip className="h-5 w-5" />
-          </Button>
-
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Message ChatGPT..."
-            className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
-            rows={1}
-          />
-
-          {/* Send or Stop Button */}
-          {isStreaming ? (
+        {/* Input Area - Exact ChatGPT Style */}
+        <div className="relative rounded-[26px] border border-border/40 bg-[#2f2f2f] shadow-[0_0_0_1px_rgba(0,0,0,0.1)]">
+          <div className="flex items-center gap-2 px-4 py-3">
+            {/* File Upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              suppressHydrationWarning
+            />
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0 text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                // Stop streaming functionality would go here
-                toast.info("Streaming stopped")
-              }}
+              className="shrink-0 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-transparent"
+              onClick={() => fileInputRef.current?.click()}
               suppressHydrationWarning
             >
-              <Square className="h-5 w-5 fill-current" />
+              <Paperclip className="h-5 w-5" />
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 text-primary hover:bg-primary/10 disabled:opacity-50"
-              onClick={handleSend}
-              disabled={(!input.trim() && uploadedFiles.length === 0) || isUploading}
-              suppressHydrationWarning
-            >
-              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-            </Button>
-          )}
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything"
+              className="flex-1 max-h-[200px] resize-none bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none py-1.5"
+              rows={1}
+            />
+
+            {/* Right Icons Group */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Microphone Button - Placeholder */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-transparent"
+                suppressHydrationWarning
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              </Button>
+
+              {/* Send or Stop Button */}
+              {isStreaming ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg bg-foreground text-background hover:bg-foreground/90"
+                  onClick={() => {
+                    toast.info("Streaming stopped")
+                  }}
+                  suppressHydrationWarning
+                >
+                  <Square className="h-4 w-4 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:cursor-not-allowed"
+                  onClick={handleSend}
+                  disabled={(!input.trim() && uploadedFiles.length === 0) || isUploading}
+                  suppressHydrationWarning
+                >
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+        
+        {/* Footer Text - ChatGPT Style */}
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          GalaxyAI can make mistakes. Check important info.
+        </p>
       </div>
     </div>
   )

@@ -162,12 +162,12 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-transform duration-300 md:relative md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-[#141414] text-sidebar-foreground border-r border-border/30 transition-transform duration-300 md:relative md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* New Chat Button */}
-        <div className="border-b border-sidebar-border p-4">
+        <div className="p-4">
           <Button
             className="w-full gap-2 bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             onClick={() => {
@@ -181,7 +181,7 @@ export function Sidebar({
         </div>
 
         {/* Search Bar */}
-        <div className="border-b border-sidebar-border p-4">
+        <div className="p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/50" />
             <Input
@@ -195,7 +195,10 @@ export function Sidebar({
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 overflow-y-auto" style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#1a1a1a #0d0d0d'
+        }}>
           {Object.entries(groupedConversations).map(([group, convs]) =>
             convs.length > 0 ? (
               <div key={group}>
@@ -246,7 +249,7 @@ export function Sidebar({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                              className="h-6 w-6 text-sidebar-foreground/60 hover:text-sidebar-foreground  hover:bg-white/5"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleRenameStart(conv)
@@ -258,7 +261,7 @@ export function Sidebar({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-sidebar-foreground/60 hover:text-destructive"
+                              className="h-6 w-6 text-sidebar-foreground/60 hover:text-destructive  hover:bg-white/5"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDeleteClick(conv.id)
@@ -279,7 +282,7 @@ export function Sidebar({
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-sidebar-border p-4">
+        <div className="p-4">
           {/* Dark Mode Toggle */}
           <Button
             variant="ghost"

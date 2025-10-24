@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Copy, Edit2, RotateCcw, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useUser } from "@clerk/nextjs"
 import ReactMarkdown from "react-markdown"
 import type { Message as UIMessage } from "ai/react"
 
@@ -33,6 +34,7 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(message.content)
+  const { user } = useUser()
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -106,48 +108,32 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      {/* Avatar */}
-      <Avatar className="h-8 w-8 shrink-0">
-        {isUser ? (
-          <>
-            <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
-            <AvatarFallback>U</AvatarFallback>
-          </>
-        ) : (
-          <>
-            <AvatarImage src="https://api.dicebear.com/7.x/bottts/svg?seed=assistant" />
-            <AvatarFallback>AI</AvatarFallback>
-          </>
-        )}
-      </Avatar>
+      {/* Avatar - Only show for user messages */}
+      {isUser && (
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={user?.imageUrl} />
+          <AvatarFallback>{user?.firstName?.[0] || user?.username?.[0] || 'U'}</AvatarFallback>
+        </Avatar>
+      )}
 
       {/* Message Content */}
-      <div className={`flex flex-col gap-2 flex-1 max-w-[80%] ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col gap-2 flex-1 ${isUser ? "items-end" : "items-start"} ${isUser ? "" : "max-w-[85%]"}`}>
         {isEditing && isUser ? (
-          <div className="flex w-full gap-2">
+          <div className="w-full rounded-2xl border border-border bg-card p-3">
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="flex-1 rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full bg-transparent text-sm text-foreground focus:outline-none resize-none"
               style={{ minHeight: '60px', maxHeight: '200px' }}
               rows={3}
               autoFocus
+              placeholder="Edit your message..."
             />
-            <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-border">
               <Button
                 size="sm"
-                onClick={() => {
-                  if (editedContent.trim() && editedContent !== message.content) {
-                    onEdit?.(message.id, editedContent)
-                  }
-                  setIsEditing(false)
-                }}
-              >
-                Save & Submit
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
+                variant="ghost"
+                className="rounded-full h-8 px-4"
                 onClick={() => {
                   setIsEditing(false)
                   setEditedContent(message.content)
@@ -155,13 +141,25 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
               >
                 Cancel
               </Button>
+              <Button
+                size="sm"
+                className="rounded-full h-8 px-4"
+                onClick={() => {
+                  if (editedContent.trim() && editedContent !== message.content) {
+                    onEdit?.(message.id, editedContent)
+                  }
+                  setIsEditing(false)
+                }}
+              >
+                Send
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="flex items-start gap-2 w-full relative">
+          <>
             <div
-              className={`rounded-lg px-4 py-2 flex-1 ${
-                isUser ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground"
+              className={`rounded-3xl px-4 py-3 ${
+                isUser ? "bg-[#2f2f2f] text-foreground" : "text-foreground"
               }`}
             >
               {/* Display files if present (for user messages) */}
@@ -203,21 +201,32 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
               )}
             </div>
             
-            {/* Edit button on the right side of user message - absolute positioning to prevent layout shift */}
-            {isUser && isLastUserMessage && (
-              <div className={`absolute ${isUser ? 'right-0' : 'left-0'} top-1 -translate-x-full mr-2 transition-opacity duration-200 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {/* Action buttons below user query on the right side */}
+            {isUser && (
+              <div className={`flex items-center justify-end gap-1 mt-1 transition-opacity duration-200 ${showActions ? 'opacity-100' : 'opacity-0'}`}>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7 shrink-0" 
-                  onClick={() => setIsEditing(true)}
-                  title="Edit message"
+                  className="h-6 w-6" 
+                  onClick={handleCopy}
+                  title="Copy message"
                 >
-                  <Edit2 className="h-3.5 w-3.5" />
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 </Button>
+                {isLastUserMessage && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={() => setIsEditing(true)}
+                    title="Edit message"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Timestamp and Actions - Always show timestamp, show action buttons on hover */}

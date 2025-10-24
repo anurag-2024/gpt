@@ -198,7 +198,7 @@ export default function Home() {
     setCurrentConversationId(null)
     setMessages([])
     router.push('/')
-    toast.success("New chat started")
+    // toast.success("New chat started")
   }
 
   // Rename a conversation
@@ -651,6 +651,9 @@ export default function Home() {
           onPreviousBranch={handlePreviousBranch}
           onNextBranch={handleNextBranch}
           currentBranchIndices={currentBranchIndices}
+          conversationId={currentConversationId}
+          conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
+          onDeleteConversation={handleDeleteConversation}
         />
         <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
       </div>
