@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Trash2, Edit, Menu, X, PenSquare, BookMarked, Briefcase, HelpCircle, FileText, MessageCircle, Download, Keyboard, LogOut, Settings, Sparkles, User, Share2, Archive, BookOpen, FolderKanban, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -56,14 +56,20 @@ export function Sidebar({
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const [collapsedHovered, setCollapsedHovered] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
 
+  // Prevent hydration mismatch by only rendering user-specific content after mount
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Get user display name
-  const userName = user?.firstName || user?.emailAddress?.split('@')[0] || 'User'
-  const userEmail = user?.emailAddress || 'user@example.com'
+  const userName = isMounted ? (user?.firstName || user?.emailAddress?.split('@')[0] || 'User') : 'User'
+  const userEmail = isMounted ? (user?.emailAddress || 'user@example.com') : 'user@example.com'
   
   // Get user initials for avatar fallback
-  const userInitials = user?.firstName?.[0]?.toUpperCase() || user?.emailAddress?.[0]?.toUpperCase() || 'U'
+  const userInitials = isMounted ? (user?.firstName?.[0]?.toUpperCase() || user?.emailAddress?.[0]?.toUpperCase() || 'U') : 'U'
 
   const handleRenameStart = (conv: Conversation) => {
     setEditingId(conv.id)

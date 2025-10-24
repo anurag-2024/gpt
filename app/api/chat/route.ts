@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     console.log("✅ Gemini API Key exists:", !!apiKey)
 
     // Parse request body
-    const { messages, conversationId, model = "gemini-2.5-flash", parentMessageId = null, files = [] } = await req.json();
+    const { messages, conversationId, model = "gemini-2.5-flash", parentMessageId = null, files = [], isTemporaryChat = false } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
       model, 
       messageCount: messages.length,
       parentMessageId,
-      filesInBody: files.length 
+      filesInBody: files.length,
+      isTemporaryChat
     })
 
     // Check if the latest message has image attachments - use vision model
@@ -71,20 +72,22 @@ export async function POST(req: NextRequest) {
     // Connect to MongoDB
     await connectDB();
 
-    // Get or create conversation
+    // Get or create conversation (skip if temporary chat)
     let conversation;
-    if (conversationId) {
-      conversation = await Conversation.findById(conversationId);
-      if (!conversation || conversation.userId !== userId) {
-        return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    if (!isTemporaryChat) {
+      if (conversationId) {
+        conversation = await Conversation.findById(conversationId);
+        if (!conversation || conversation.userId !== userId) {
+          return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+        }
+      } else {
+        // Create new conversation
+        conversation = await Conversation.create({
+          userId,
+          title: messages[0]?.content.substring(0, 50) || "New Chat",
+          model,
+        });
       }
-    } else {
-      // Create new conversation
-      conversation = await Conversation.create({
-        userId,
-        title: messages[0]?.content.substring(0, 50) || "New Chat",
-        model,
-      });
     }
 
     // Get user's query (last user message)
@@ -101,21 +104,25 @@ export async function POST(req: NextRequest) {
     console.log("User query:", userQuery.substring(0, 100))
     console.log("User files:", userFiles.length)
     
-    // 🧠 Retrieve relevant memories from Mem0
+    // 🧠 Retrieve relevant memories from Mem0 (skip if temporary chat)
     let contextFromMemory = "";
-    try {
-      const relevantMemories = await searchMemories(userId, userQuery, conversationId);
-      
-      if (relevantMemories && relevantMemories.length > 0) {
-        contextFromMemory = "\n\n[Context from memory]:\n" + 
-          relevantMemories
-            .map((m: any) => `- ${m.memory}`)
-            .join("\n");
-        console.log("🧠 Added", relevantMemories.length, "memories as context");
+    if (!isTemporaryChat) {
+      try {
+        const relevantMemories = await searchMemories(userId, userQuery, conversationId);
+        
+        if (relevantMemories && relevantMemories.length > 0) {
+          contextFromMemory = "\n\n[Context from memory]:\n" + 
+            relevantMemories
+              .map((m: any) => `- ${m.memory}`)
+              .join("\n");
+          console.log("🧠 Added", relevantMemories.length, "memories as context");
+        }
+      } catch (memError) {
+        console.error("⚠️ Mem0 error (non-blocking):", memError);
+        // Don't fail the request if memory retrieval fails
       }
-    } catch (memError) {
-      console.error("⚠️ Mem0 error (non-blocking):", memError);
-      // Don't fail the request if memory retrieval fails
+    } else {
+      console.log("🔒 Skipping memory retrieval for temporary chat");
     }
     
     // If we have files, create a modified messages array with attachments
@@ -215,16 +222,21 @@ export async function POST(req: NextRequest) {
         onChunk({ chunk }) {
           console.log("📦 Chunk received:", chunk.type)
         },
-        async onFinish({ text, usage, finishReason, error }) {
+        async onFinish({ text, usage, finishReason }) {
           console.log("🎉 OnFinish called!")
           console.log("📊 Text length:", text?.length)
           console.log("📊 Finish reason:", finishReason)
-          console.log("📊 Error:", error)
           fullResponseText = text;
+          
+          // Skip database and memory operations for temporary chats
+          if (isTemporaryChat) {
+            console.log("� Skipping DB/memory storage for temporary chat");
+            return;
+          }
           
           try {
             // Prepare files in the correct format for MongoDB
-            const filesToSave = userFiles.length > 0 ? userFiles.map(f => {
+            const filesToSave = userFiles.length > 0 ? userFiles.map((f: any) => {
               // Ensure we return a plain object, not a Proxy or anything weird
               return {
                 url: String(f.url),
@@ -241,7 +253,7 @@ export async function POST(req: NextRequest) {
             
             // Save query-response pair as a single message
             const messageData: any = {
-              conversationId: conversation._id,
+              conversationId: conversation!._id,
               query: userQuery,
               response: text,
               tokenCount: usage?.totalTokens || estimateTokens(userQuery + text),
@@ -269,16 +281,16 @@ export async function POST(req: NextRequest) {
             }
 
             // Update conversation metadata
-            await Conversation.findByIdAndUpdate(conversation._id, {
+            await Conversation.findByIdAndUpdate(conversation!._id, {
               lastMessageAt: new Date(),
-              totalTokens: (conversation.totalTokens || 0) + (usage?.totalTokens || 0),
+              totalTokens: (conversation!.totalTokens || 0) + (usage?.totalTokens || 0),
             });
             
             console.log("✅ Conversation metadata updated")
             
             // 🧠 Store memories in Mem0 for future context
             try {
-              await addMemories(userId, conversation._id.toString(), [
+              await addMemories(userId, conversation!._id.toString(), [
                 { role: "user", content: userQuery },
                 { role: "assistant", content: text },
               ]);
