@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Trash2, Edit, Menu, X, PenSquare, BookMarked, Briefcase, HelpCircle, FileText, MessageCircle, Download, Keyboard, LogOut, Settings, Sparkles, User, Share2, Archive, BookOpen, FolderKanban, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,6 +56,7 @@ export function Sidebar({
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const [collapsedHovered, setCollapsedHovered] = useState(false)
+  const router = useRouter()
 
   // Get user display name
   const userName = user?.firstName || user?.emailAddress?.split('@')[0] || 'User'
@@ -229,7 +231,10 @@ export function Sidebar({
               <div className="h-px bg-[#4e4e4e] my-1" />
 
               {/* Upgrade Plan */}
-              <DropdownMenuItem className="gap-3 rounded-md px-3 py-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
+              <DropdownMenuItem 
+                className="gap-3 rounded-md px-3 py-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]"
+                onClick={() => router.push('/pricing')}
+              >
                 <Sparkles className="h-5 w-5" />
                 <span className="text-sm">Upgrade plan</span>
               </DropdownMenuItem>
@@ -542,7 +547,10 @@ export function Sidebar({
               <div className="h-px bg-[#4e4e4e] my-1" />
 
               {/* Upgrade Plan */}
-              <DropdownMenuItem className="gap-3 rounded-md px-3 py-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
+              <DropdownMenuItem 
+                className="gap-3 rounded-md px-3 py-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]"
+                onClick={() => router.push('/pricing')}
+              >
                 <Sparkles className="h-5 w-5" />
                 <span className="text-sm">Upgrade plan</span>
               </DropdownMenuItem>
@@ -617,6 +625,10 @@ export function Sidebar({
             <Button
               className="rounded-lg bg-transparent border border-[#4e4e4e] text-[#ececec] hover:bg-[#2f2f2f] h-9 px-3 text-sm font-medium"
               variant="outline"
+              onClick={(e) => {
+                          e.stopPropagation()
+                          router.push('/pricing')
+                        }}
             >
               Upgrade
             </Button>

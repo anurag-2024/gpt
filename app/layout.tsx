@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Galaxy AI - ChatGPT Clone",
+  title: "ChatGPT",
   description: "A pixel-perfect ChatGPT clone built with Next.js, Vercel AI SDK, and MongoDB",
 };
 

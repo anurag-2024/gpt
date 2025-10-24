@@ -7,7 +7,15 @@ import { useUser } from "@clerk/nextjs"
 import { Sidebar } from "@/components/sidebar"
 import { ChatArea } from "@/components/chat-area"
 import { InputArea } from "@/components/input-area"
+import { Button } from "@/components/ui/button"
+import { Sparkles, MessageSquareOff, ChevronDown, Check } from "lucide-react"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface Conversation {
   id: string
@@ -39,6 +47,8 @@ export default function Home() {
   const [currentBranchIndices, setCurrentBranchIndices] = useState<Map<string, number>>(new Map())
   const [isEditingResponse, setIsEditingResponse] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState("")
+  const [isTemporaryChat, setIsTemporaryChat] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<"chatgpt" | "chatgpt-go">("chatgpt")
 
   // Welcome messages array
   const getWelcomeMessages = (userName?: string | null) => [
@@ -761,16 +771,124 @@ export default function Home() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {messages.length === 0 ? (
           /* Empty state - centered welcome with input */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-full max-w-3xl px-4">
-              <div className="text-center mb-8">
-                <h1 className="text-[32px] font-medium text-foreground mb-0 tracking-tight">
-                  {welcomeMessage || "Ready when you are."}
-                </h1>
-              </div>
-              <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+          <>
+            {/* Top Navigation Bar - Only shown when no messages */}
+            <div className="flex items-center justify-between px-4 py-3">
+              {/* Left - ChatGPT Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 px-3 py-2 h-9 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] rounded-lg"
+                  >
+                    ChatGPT
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[340px] bg-[#2f2f2f] border-[#3f3f3f] text-[#ececec] p-2">
+                  {/* ChatGPT Go Option */}
+                  <DropdownMenuItem 
+                    className="flex items-start gap-3 p-3 rounded-lg focus:bg-[#3f3f3f] focus:text-[#ececec] cursor-pointer mb-1"
+                    onClick={() => setSelectedModel("chatgpt-go")}
+                  >
+                    <div className="mt-0.5">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push('/pricing')
+                        }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-[15px]">ChatGPT Go</span>
+                      </div>
+                      <p className="text-xs text-[#8e8ea0]">Our smartest model & more</p>
+                    </div>
+                    <div className="flex items-center gap-2" >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-3 text-xs bg-[#3f3f3f] hover:bg-[#4f4f4f] text-[#ececec] rounded-md"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push('/pricing')
+                        }}
+                      >
+                        Upgrade
+                      </Button>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* ChatGPT Option */}
+                  <DropdownMenuItem 
+                    className="flex items-start gap-3 p-3 rounded-lg focus:bg-[#3f3f3f] focus:text-[#ececec] cursor-pointer"
+                    onClick={() => setSelectedModel("chatgpt")}
+                  >
+                    <div className="mt-0.5">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-[15px]">ChatGPT</span>
+                      </div>
+                      <p className="text-xs text-[#8e8ea0]">Great for everyday tasks</p>
+                    </div>
+                    {selectedModel === "chatgpt" && (
+                      <div className="mt-0.5">
+                        <Check className="h-5 w-5 text-[#ececec]" />
+                      </div>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Center - Upgrade to Go Button */}
+              <Button
+                className="bg-gradient-to-r from-[#6e56cf] to-[#8e4ec6] hover:from-[#5d47b8] hover:to-[#7d3fb5] text-white rounded-full px-4 py-2 h-9 text-sm font-medium flex items-center gap-2 shadow-sm"
+                onClick={() => {
+                  router.push('/pricing')
+                }}
+              >
+                <Sparkles className="h-4 w-4" />
+                Upgrade to Go
+              </Button>
+
+              {/* Right - Temporary Chat Button */}
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 px-3 py-2 h-9 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] rounded-lg"
+                onClick={() => {
+                  setIsTemporaryChat(!isTemporaryChat)
+                  if (!isTemporaryChat) {
+                    toast.info("Temporary chat enabled - This conversation won't be saved")
+                  } else {
+                    toast.info("Temporary chat disabled - Conversations will be saved")
+                  }
+                }}
+              >
+                <MessageSquareOff className="h-4 w-4" />
+                {isTemporaryChat ? "Temporary" : "Temp Chat"}
+              </Button>
             </div>
-          </div>
+
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-full max-w-3xl px-4">
+                <div className="text-center mb-8">
+                  <h1 className="text-[32px] font-medium text-foreground mb-0 tracking-tight">
+                    {welcomeMessage || "Ready when you are."}
+                  </h1>
+                </div>
+                <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+              </div>
+            </div>
+          </>
         ) : (
           /* Chat mode - input at bottom */
           <>

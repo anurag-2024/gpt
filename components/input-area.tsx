@@ -246,7 +246,7 @@ export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps
         
         {/* Footer Text - ChatGPT Style */}
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          GalaxyAI can make mistakes. Check important info.
+          ChatGPT can make mistakes. Check important info.
         </p>
       </div>
     </div>
