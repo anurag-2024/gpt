@@ -91,7 +91,7 @@ export default function Home() {
   ]
 
   // Vercel AI SDK useChat hook for streaming
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append, reload } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append, reload, stop } = useChat({
     api: "/api/chat",
     id: currentConversationId || undefined,
     body: {
@@ -1010,7 +1010,7 @@ export default function Home() {
                     </h1>
                   )}
                 </div>
-                <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+                <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
               </div>
             </div>
           </>
@@ -1182,7 +1182,7 @@ export default function Home() {
               onDeleteConversation={handleDeleteConversation}
               userName={user?.firstName || user?.username || undefined}
             />
-            <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} />
+            <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
           </>
         )}
       </div>

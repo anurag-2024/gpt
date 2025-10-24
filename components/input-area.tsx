@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Paperclip, Square, X, Loader2 } from "lucide-react"
+import { Paperclip, Square, X, Loader2, ArrowUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -20,9 +20,10 @@ interface UploadedFile {
 interface InputAreaProps {
   onSendMessage: (message: string, files?: UploadedFile[]) => void
   isStreaming?: boolean
+  onStop?: () => void
 }
 
-export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps) {
+export function InputArea({ onSendMessage, isStreaming = false, onStop }: InputAreaProps) {
   const [input, setInput] = useState("")
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -222,22 +223,25 @@ export function InputArea({ onSendMessage, isStreaming = false }: InputAreaProps
                   size="icon"
                   className="h-8 w-8 rounded-lg bg-foreground text-background hover:bg-foreground/90"
                   onClick={() => {
-                    toast.info("Streaming stopped")
+                    if (onStop) {
+                      onStop()
+                      toast.info("Response stopped")
+                    }
                   }}
                   suppressHydrationWarning
                 >
-                  <Square className="h-4 w-4 fill-current" />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                 </Button>
               ) : (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:cursor-not-allowed"
+                  className="h-8 w-8 rounded-lg bg-foreground text-background hover:bg-foreground/90 disabled:opacity-100 disabled:bg-muted disabled:cursor-not-allowed"
                   onClick={handleSend}
                   disabled={(!input.trim() && uploadedFiles.length === 0) || isUploading}
                   suppressHydrationWarning
                 >
-                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
                 </Button>
               )}
             </div>
