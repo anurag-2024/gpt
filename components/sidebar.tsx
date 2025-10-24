@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { SignOutButton } from "@clerk/nextjs"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { SearchModal } from "@/components/search-modal"
 
 interface Conversation {
   id: string
@@ -57,11 +58,25 @@ export function Sidebar({
   const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const [collapsedHovered, setCollapsedHovered] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const router = useRouter()
 
   // Prevent hydration mismatch by only rendering user-specific content after mount
   useEffect(() => {
     setIsMounted(true)
+  }, [])
+
+  // Keyboard shortcut for search (Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchModalOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   // Get user display name
@@ -181,7 +196,10 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             className="h-10 w-10 rounded-lg text-[#ececec] hover:bg-[#2f2f2f]"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setSearchModalOpen(true)
+            }}
           >
             <Search className="h-5 w-5" />
           </Button>
@@ -363,6 +381,7 @@ export function Sidebar({
             <Button
               variant="ghost"
               className="w-full justify-start gap-2.5 rounded-lg text-[#ececec] hover:bg-[#2f2f2f] h-10 px-2.5 font-normal text-sm"
+              onClick={() => setSearchModalOpen(true)}
             >
               <Search className="h-4 w-4" />
               <span className="flex-1 text-left">Search chats</span>
@@ -658,6 +677,18 @@ export function Sidebar({
         cancelText="Cancel"
         variant="destructive"
         showSettingsLink={true}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        open={searchModalOpen}
+        onOpenChange={setSearchModalOpen}
+        conversations={conversations}
+        onSelectConversation={(convId) => {
+          onSelectConversation?.(convId)
+          setSearchModalOpen(false)
+        }}
+        onNewChat={onNewChat}
       />
     </>
   )

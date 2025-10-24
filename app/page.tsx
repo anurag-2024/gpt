@@ -162,6 +162,20 @@ export default function Home() {
     }
   }, [isTemporaryChat])
 
+  // Keyboard shortcut for new chat (Ctrl+Shift+O)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+Shift+O (or Cmd+Shift+O on Mac)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault()
+        handleNewChat()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const loadConversations = async () => {
     try {
       const response = await fetch("/api/conversations")
