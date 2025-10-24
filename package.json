@@ -28,6 +28,7 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "lucide-react": "^0.454.0",
+    "mem0ai": "^2.1.38",
     "mongoose": "^8.9.3",
     "nanoid": "^5.0.9",
     "next": "16.0.0",

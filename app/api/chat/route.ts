@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/mongodb";
 import { Message, Conversation } from "@/lib/db/models";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { searchMemories, addMemories } from "@/lib/mem0/client";
 
 // Mark as Node.js runtime for streaming
 export const runtime = "nodejs";
@@ -100,6 +101,23 @@ export async function POST(req: NextRequest) {
     console.log("User query:", userQuery.substring(0, 100))
     console.log("User files:", userFiles.length)
     
+    // 🧠 Retrieve relevant memories from Mem0
+    let contextFromMemory = "";
+    try {
+      const relevantMemories = await searchMemories(userId, userQuery, conversationId);
+      
+      if (relevantMemories && relevantMemories.length > 0) {
+        contextFromMemory = "\n\n[Context from memory]:\n" + 
+          relevantMemories
+            .map((m: any) => `- ${m.memory}`)
+            .join("\n");
+        console.log("🧠 Added", relevantMemories.length, "memories as context");
+      }
+    } catch (memError) {
+      console.error("⚠️ Mem0 error (non-blocking):", memError);
+      // Don't fail the request if memory retrieval fails
+    }
+    
     // If we have files, create a modified messages array with attachments
     let messagesForGemini = messages;
     if (userFiles.length > 0 && !lastMessage.experimental_attachments) {
@@ -157,7 +175,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Trim messages for context window - this preserves experimental_attachments
-    const trimmedMessages = trimMessagesForContext(messagesForGemini, 120000);
+    let trimmedMessages = trimMessagesForContext(messagesForGemini, 120000);
+    
+    // 🧠 Inject memory context into the conversation
+    if (contextFromMemory) {
+      // Add system message with context at the beginning
+      const systemMessage = {
+        role: "system" as const,
+        content: `You are a helpful AI assistant. Use the following context from previous conversations to provide more personalized and contextual responses:${contextFromMemory}\n\nProvide helpful, accurate responses based on the user's query and the context provided.`,
+      };
+      
+      // Insert system message at the beginning if no system message exists
+      const hasSystemMessage = trimmedMessages.some(m => m.role === "system");
+      if (!hasSystemMessage) {
+        trimmedMessages = [systemMessage, ...trimmedMessages];
+      } else {
+        // Append context to existing system message
+        const systemIdx = trimmedMessages.findIndex(m => m.role === "system");
+        trimmedMessages[systemIdx].content += contextFromMemory;
+      }
+    }
     
     console.log("About to call streamText...")
     console.log("🤖 Gemini model:", selectedModel)
@@ -176,7 +213,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.7,
         maxTokens: 8192,
         onChunk({ chunk }) {
-          // console.log("📦 Chunk received:", chunk.type)
+          console.log("📦 Chunk received:", chunk.type)
         },
         async onFinish({ text, usage, finishReason, error }) {
           console.log("🎉 OnFinish called!")
@@ -238,6 +275,19 @@ export async function POST(req: NextRequest) {
             });
             
             console.log("✅ Conversation metadata updated")
+            
+            // 🧠 Store memories in Mem0 for future context
+            try {
+              await addMemories(userId, conversation._id.toString(), [
+                { role: "user", content: userQuery },
+                { role: "assistant", content: text },
+              ]);
+              console.log("🧠 Memories stored in Mem0");
+            } catch (memError) {
+              console.error("⚠️ Mem0 storage error (non-blocking):", memError);
+              // Don't fail the request if memory storage fails
+            }
+            
           } catch (error) {
             console.error("❌ Error saving message:", error);
             console.error("❌ Error details:", error instanceof Error ? error.message : error);
