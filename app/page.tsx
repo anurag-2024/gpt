@@ -16,6 +16,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface Conversation {
   id: string
@@ -49,6 +55,28 @@ export default function Home() {
   const [welcomeMessage, setWelcomeMessage] = useState("")
   const [isTemporaryChat, setIsTemporaryChat] = useState(false)
   const [selectedModel, setSelectedModel] = useState<"chatgpt" | "chatgpt-go">("chatgpt")
+
+  // Models configuration
+  const models = [
+    {
+      id: "chatgpt" as const,
+      name: "ChatGPT",
+      icon: "G",
+      description: "Great for everyday tasks",
+    },
+    {
+      id: "chatgpt-go" as const,
+      name: "ChatGPT Go",
+      icon: "G",
+      description: "Our smartest and fastest model",
+    },
+  ]
+
+  // Handle model selection
+  const handleModelSelect = (modelId: "chatgpt" | "chatgpt-go") => {
+    setSelectedModel(modelId)
+    toast.success(`Switched to ${modelId === "chatgpt" ? "ChatGPT" : "ChatGPT Go"}`)
+  }
 
   // Welcome messages array
   const getWelcomeMessages = (userName?: string | null) => [
@@ -992,46 +1020,153 @@ export default function Home() {
             {/* Top bar for temporary chat mode */}
             {isTemporaryChat && (
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#2f2f2f]">
-                {/* Left - Temporary Chat with icon */}
-                <div className="flex items-center gap-2 text-[#ececec]">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" data-rtl-flip="" className="icon">
-                    <path d="M11.7304 7.35195C11.9273 7.04193 12.3384 6.95002 12.6484 7.14687C12.9582 7.34374 13.0502 7.75487 12.8535 8.06484L9.67868 13.0648C9.56765 13.2397 9.38114 13.3525 9.17477 13.3705C8.96844 13.3885 8.76558 13.3096 8.62595 13.1566L6.80075 11.1566L6.7197 11.0482C6.56149 10.7827 6.60647 10.4337 6.84372 10.2172C7.08112 10.0007 7.43256 9.98823 7.68259 10.1703L7.78317 10.2601L9.02145 11.6166L11.7304 7.35195Z" data-rtl-flip=""></path>
-                    <path d="M4.52148 15.1664C4.61337 14.8108 4.39951 14.4478 4.04395 14.3559C3.73281 14.2756 3.41605 14.4295 3.28027 14.7074L3.2334 14.8334C3.13026 15.2324 3.0046 15.6297 2.86133 16.0287L2.71289 16.4281C2.63179 16.6393 2.66312 16.8775 2.79688 17.06C2.93067 17.2424 3.14825 17.3443 3.37402 17.3305L3.7793 17.3002C4.62726 17.2265 5.44049 17.0856 6.23438 16.8764C6.84665 17.1788 7.50422 17.4101 8.19434 17.558C8.55329 17.6347 8.9064 17.4062 8.9834 17.0473C9.06036 16.6881 8.83177 16.3342 8.47266 16.2572C7.81451 16.1162 7.19288 15.8862 6.62305 15.5814C6.50913 15.5205 6.38084 15.4946 6.25391 15.5053L6.12793 15.5277C5.53715 15.6955 4.93256 15.819 4.30566 15.9027C4.33677 15.8052 4.36932 15.7081 4.39844 15.6098L4.52148 15.1664Z"></path>
-                    <path d="M15.7998 14.5365C15.5786 14.3039 15.2291 14.2666 14.9668 14.4301L14.8604 14.5131C13.9651 15.3633 12.8166 15.9809 11.5273 16.2572C11.1682 16.3342 10.9396 16.6881 11.0166 17.0473C11.0936 17.4062 11.4467 17.6347 11.8057 17.558C13.2388 17.2509 14.5314 16.5858 15.5713 15.6644L15.7754 15.4769C16.0417 15.224 16.0527 14.8028 15.7998 14.5365Z"></path>
-                    <path d="M2.23828 7.58925C1.97668 8.34846 1.83496 9.15956 1.83496 10.0004C1.835 10.7359 1.94324 11.4483 2.14551 12.1234L2.23828 12.4105C2.35793 12.7576 2.73588 12.9421 3.08301 12.8226C3.3867 12.718 3.56625 12.4153 3.52637 12.1088L3.49512 11.9769C3.2808 11.3548 3.16508 10.6908 3.16504 10.0004C3.16504 9.30975 3.28072 8.64512 3.49512 8.02284C3.61476 7.67561 3.43024 7.29679 3.08301 7.17714C2.73596 7.05777 2.35799 7.2423 2.23828 7.58925Z"></path>
-                    <path d="M16.917 12.8226C17.2641 12.9421 17.6421 12.7576 17.7617 12.4105C18.0233 11.6515 18.165 10.8411 18.165 10.0004C18.165 9.15956 18.0233 8.34846 17.7617 7.58925C17.642 7.2423 17.264 7.05777 16.917 7.17714C16.5698 7.29679 16.3852 7.67561 16.5049 8.02284C16.7193 8.64512 16.835 9.30975 16.835 10.0004C16.8349 10.6908 16.7192 11.3548 16.5049 11.9769C16.3852 12.3242 16.5698 12.703 16.917 12.8226Z"></path>
-                    <path d="M8.9834 2.95253C8.90632 2.59372 8.55322 2.36509 8.19434 2.44179C6.76126 2.74891 5.46855 3.41404 4.42871 4.33534L4.22461 4.52284C3.95829 4.77575 3.94729 5.19696 4.2002 5.46327C4.42146 5.69603 4.77088 5.73326 5.0332 5.56972L5.13965 5.48769C6.03496 4.63746 7.18337 4.01888 8.47266 3.74257C8.83177 3.66561 9.06036 3.31165 8.9834 2.95253Z"></path>
-                    <path d="M15.5713 4.33534C14.5314 3.41404 13.2387 2.74891 11.8057 2.44179C11.4468 2.36509 11.0937 2.59372 11.0166 2.95253C10.9396 3.31165 11.1682 3.66561 11.5273 3.74257C12.7361 4.00161 13.8209 4.56094 14.6895 5.33046L14.8604 5.48769L14.9668 5.56972C15.2291 5.73326 15.5785 5.69603 15.7998 5.46327C16.0211 5.23025 16.0403 4.87902 15.8633 4.62538L15.7754 4.52284L15.5713 4.33534Z"></path>
-                  </svg>
-                  <span className="text-sm font-medium">Temporary Chat</span>
+                {/* Left - ChatGPT button (same as new chat page) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 rounded-full hover:bg-[#2f2f2f]"
-                    onClick={() => {
-                      // Show info tooltip or dialog
-                    }}
+                    className="flex items-center gap-2 px-3 py-2 h-9 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] rounded-lg"
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#8e8ea0]">
-                      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M8 7V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="8" cy="5" r="0.5" fill="currentColor"/>
-                    </svg>
+                    ChatGPT
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[340px] bg-[#2f2f2f] border-[#3f3f3f] text-[#ececec] p-2">
+                  {/* ChatGPT Go Option */}
+                  <DropdownMenuItem 
+                    className="flex items-start gap-3 p-3 rounded-lg focus:bg-[#3f3f3f] focus:text-[#ececec] cursor-pointer mb-1"
+                    onClick={() => setSelectedModel("chatgpt-go")}
+                  >
+                    <div className="mt-0.5">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push('/pricing')
+                        }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-[15px]">ChatGPT Go</span>
+                      </div>
+                      <p className="text-xs text-[#8e8ea0]">Our smartest model & more</p>
+                    </div>
+                    <div className="flex items-center gap-2" >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-3 text-xs bg-[#3f3f3f] hover:bg-[#4f4f4f] text-[#ececec] rounded-md"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push('/pricing')
+                        }}
+                      >
+                        Upgrade
+                      </Button>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* ChatGPT Option */}
+                  <DropdownMenuItem 
+                    className="flex items-start gap-3 p-3 rounded-lg focus:bg-[#3f3f3f] focus:text-[#ececec] cursor-pointer"
+                    onClick={() => setSelectedModel("chatgpt")}
+                  >
+                    <div className="mt-0.5">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-[15px]">ChatGPT</span>
+                      </div>
+                      <p className="text-xs text-[#8e8ea0]">Great for everyday tasks</p>
+                    </div>
+                    {selectedModel === "chatgpt" && (
+                      <div className="mt-0.5">
+                        <Check className="h-5 w-5 text-[#ececec]" />
+                      </div>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+       
+                
+                {/* Middle - Temporary Chat indicator */}
+                <div className="flex items-center gap-2 text-[#8e8ea0] absolute left-1/2 transform -translate-x-1/2">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" data-rtl-flip="" className="icon"><path d="M4.52148 15.1664C4.61337 14.8108 4.39951 14.4478 4.04395 14.3559C3.73281 14.2756 3.41605 14.4295 3.28027 14.7074L3.2334 14.8334C3.13026 15.2324 3.0046 15.6297 2.86133 16.0287L2.71289 16.4281C2.63179 16.6393 2.66312 16.8775 2.79688 17.06C2.93067 17.2424 3.14825 17.3443 3.37402 17.3305L3.7793 17.3002C4.62726 17.2265 5.44049 17.0856 6.23438 16.8764C6.84665 17.1788 7.50422 17.4101 8.19434 17.558C8.55329 17.6348 8.9064 17.4062 8.9834 17.0473C9.06036 16.6882 8.83177 16.3342 8.47266 16.2572C7.81451 16.1162 7.19288 15.8862 6.62305 15.5815C6.50913 15.5206 6.38084 15.4946 6.25391 15.5053L6.12793 15.5277C5.53715 15.6955 4.93256 15.819 4.30566 15.9027C4.33677 15.8053 4.36932 15.7081 4.39844 15.6098L4.52148 15.1664Z"></path><path d="M15.7998 14.5365C15.5786 14.3039 15.2291 14.2666 14.9668 14.4301L14.8604 14.5131C13.9651 15.3633 12.8166 15.9809 11.5273 16.2572C11.1682 16.3342 10.9396 16.6882 11.0166 17.0473C11.0936 17.4062 11.4467 17.6348 11.8057 17.558C13.2388 17.2509 14.5314 16.5858 15.5713 15.6645L15.7754 15.477C16.0417 15.2241 16.0527 14.8028 15.7998 14.5365Z"></path><path d="M2.23828 7.58927C1.97668 8.34847 1.83496 9.15958 1.83496 10.0004C1.835 10.736 1.94324 11.4483 2.14551 12.1234L2.23828 12.4106C2.35793 12.7576 2.73588 12.9421 3.08301 12.8227C3.3867 12.718 3.56625 12.4154 3.52637 12.1088L3.49512 11.977C3.2808 11.3549 3.16508 10.6908 3.16504 10.0004C3.16504 9.30977 3.28072 8.64514 3.49512 8.02286C3.61476 7.67563 3.43024 7.2968 3.08301 7.17716C2.73596 7.05778 2.35799 7.24232 2.23828 7.58927Z"></path><path d="M16.917 12.8227C17.2641 12.9421 17.6421 12.7576 17.7617 12.4106C18.0233 11.6515 18.165 10.8411 18.165 10.0004C18.165 9.15958 18.0233 8.34847 17.7617 7.58927C17.642 7.24231 17.264 7.05778 16.917 7.17716C16.5698 7.2968 16.3852 7.67563 16.5049 8.02286C16.7193 8.64514 16.835 9.30977 16.835 10.0004C16.8349 10.6908 16.7192 11.3549 16.5049 11.977C16.3852 12.3242 16.5698 12.703 16.917 12.8227Z"></path><path d="M8.9834 2.95255C8.90632 2.59374 8.55322 2.3651 8.19434 2.44181C6.76126 2.74892 5.46855 3.41405 4.42871 4.33536L4.22461 4.52286C3.95829 4.77577 3.94729 5.19697 4.2002 5.46329C4.42146 5.69604 4.77088 5.73328 5.0332 5.56973L5.13965 5.4877C6.03496 4.63748 7.18337 4.0189 8.47266 3.74259C8.83177 3.66563 9.06036 3.31166 8.9834 2.95255Z"></path><path d="M15.5713 4.33536C14.5314 3.41405 13.2387 2.74892 11.8057 2.44181C11.4468 2.3651 11.0937 2.59374 11.0166 2.95255C10.9396 3.31166 11.1682 3.66563 11.5273 3.74259C12.7361 4.00163 13.8209 4.56095 14.6895 5.33048L14.8604 5.4877L14.9668 5.56973C15.2291 5.73327 15.5785 5.69604 15.7998 5.46329C16.0211 5.23025 16.0403 4.87902 15.8633 4.6254L15.7754 4.52286L15.5713 4.33536Z"></path></svg>
+                  <span className="text-sm text-[#8e8ea0]">Temporary Chat</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-[#3f3f3f] transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#8e8ea0]">
+                            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+                            <path d="M8 11V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <circle cx="8" cy="5.5" r="0.75" fill="currentColor"/>
+                          </svg>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs bg-[#2f2f2f] text-white border border-[#4d4d4d] p-3">
+                        <p className="text-xs leading-relaxed">
+                          Temporary Chats won't appear in your history, and ChatGPT won't remember anything you talk about.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 
-                {/* Right - Menu button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f]"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="8" cy="3" r="1.5"/>
-                    <circle cx="8" cy="8" r="1.5"/>
-                    <circle cx="8" cy="13" r="1.5"/>
-                  </svg>
-                </Button>
+                {/* Right - Three horizontal dots menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="text-[#8e8ea0]">
+                        <circle cx="2" cy="8" r="1.5"/>
+                        <circle cx="8" cy="8" r="1.5"/>
+                        <circle cx="14" cy="8" r="1.5"/>
+                      </svg>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-40 bg-[#2f2f2f] border-[#4d4d4d] text-white p-1"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => {
+                        toast.info("Report functionality coming soon")
+                      }}
+                      className="cursor-pointer hover:bg-[#3f3f3f] rounded-md px-3 py-2 flex items-center gap-3"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#ececec]">
+                        <path d="M4 15C4 15 5 14 8 14C11 14 13 16 16 16C19 16 20 15 20 15V3C20 3 19 4 16 4C13 4 11 2 8 2C5 2 4 3 4 3V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M4 22V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-sm text-[#ececec]">Report</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setMessages([])
+                        setIsTemporaryChat(false)
+                        router.push('/')
+                      }}
+                      className="cursor-pointer hover:bg-[#3f3f3f] rounded-md px-3 py-2 flex items-center gap-3"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#ef4444]">
+                        <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-sm text-[#ef4444]">Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
             <ChatArea 
