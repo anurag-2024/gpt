@@ -114,17 +114,17 @@ export function ChatArea({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={handleArchive} className="gap-2">
+                  <DropdownMenuItem onClick={handleArchive} className="gap-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
                     <Archive className="h-4 w-4" />
                     Archive
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleReport} className="gap-2">
+                  <DropdownMenuItem onClick={handleReport} className="gap-2 cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
                     <Flag className="h-4 w-4" />
                     Report
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={handleDeleteClick} 
-                    className="gap-2 text-destructive focus:text-destructive"
+                    className="gap-2 text-destructive focus:text-destructive cursor-pointer hover:bg-[#212121] focus:bg-[#212121]"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete
