@@ -16,10 +16,12 @@ interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
   title: string
-  description: string
+  description?: string
+  highlightedText?: string
   confirmText?: string
   cancelText?: string
   variant?: "default" | "destructive"
+  showSettingsLink?: boolean
 }
 
 export function ConfirmDialog({
@@ -28,25 +30,68 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
+  highlightedText,
   confirmText = "Continue",
   cancelText = "Cancel",
   variant = "default",
+  showSettingsLink = false,
 }: ConfirmDialogProps) {
+  const handleCancel = () => {
+    onOpenChange(false)
+  }
+
+  const handleConfirm = () => {
+    onConfirm()
+    onOpenChange(false)
+  }
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+      <AlertDialogContent className="max-w-md bg-zinc-900 border-zinc-800">
+        <AlertDialogHeader className="space-y-3">
+          <AlertDialogTitle className="text-xl font-semibold text-white">
+            {title}
+          </AlertDialogTitle>
+          <div className="space-y-2">
+            {description && (
+              <AlertDialogDescription className="text-sm text-zinc-400">
+                {description}{" "}
+                {highlightedText && (
+                  <span className="font-semibold text-white">{highlightedText}</span>
+                )}
+                .
+              </AlertDialogDescription>
+            )}
+            {showSettingsLink && (
+              <AlertDialogDescription className="text-sm text-zinc-400">
+                Visit{" "}
+                <button
+                  onClick={() => {
+                    // Navigate to settings or open settings dialog
+                    console.log("Navigate to settings")
+                  }}
+                  className="underline hover:text-zinc-300 transition-colors"
+                >
+                  settings
+                </button>{" "}
+                to delete any memories saved during this chat.
+              </AlertDialogDescription>
+            )}
+          </div>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
+        <AlertDialogFooter className="flex-row justify-end space-x-2 mt-4">
+          <AlertDialogCancel 
+            onClick={handleCancel}
+            className="mt-0 bg-transparent border-0 text-zinc-400 hover:text-white hover:bg-zinc-800"
+          >
+            {cancelText}
+          </AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={handleConfirm}
             className={
               variant === "destructive"
-                ? "bg-destructive hover:bg-destructive/90 text-white"
-                : ""
+                ? "bg-red-600 hover:bg-red-700 text-white font-medium px-4"
+                : "bg-white hover:bg-zinc-200 text-black font-medium px-4"
             }
           >
             {confirmText}

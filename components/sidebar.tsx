@@ -326,11 +326,17 @@ export function Sidebar({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone and all messages will be permanently deleted."
+        title="Delete chat?"
+        description="This will delete"
+        highlightedText={
+          conversationToDelete
+            ? conversations.find((c) => c.id === conversationToDelete)?.title || "New chat"
+            : "New chat"
+        }
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+        showSettingsLink={true}
       />
     </>
   )

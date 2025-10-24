@@ -200,11 +200,13 @@ export function ChatArea({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone and all messages will be permanently deleted."
+        title="Delete chat?"
+        description="This will delete"
+        highlightedText={conversationTitle || "New chat"}
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+        showSettingsLink={true}
       />
     </div>
   )
