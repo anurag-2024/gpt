@@ -1,211 +1,89 @@
-# Galaxy AI - ChatGPT Clone
+# GPT (Chat + Image Library)
 
-A pixel-perfect ChatGPT clone built with Next.js 15, Vercel AI SDK, MongoDB, and Clerk authentication. This project demonstrates enterprise-level architecture following the patterns from [Dub.co](https://github.com/dubinc/dub).
+This is a Next.js (App Router) TypeScript project that provides a ChatGPT-style interface with streaming responses, a saved conversations sidebar, and an Image Library for generated images.
 
-## 🎯 Features
+Key features
+- Chat UI with streaming assistant responses
+- Conversation list cached in Redux Toolkit (cached across navigation)
+- Clerk-based user authentication (client-side user is synced into Redux)
+- Image generation/upload flow with a library view (download/share actions)
+- Server streaming backed by a Gemini-compatible model (API integration)
 
-- ✅ **Pixel-Perfect UI** - ChatGPT-like interface designed with v0.dev
-- ✅ **Streaming AI Responses** - Real-time chat using Vercel AI SDK
-- ✅ **Chat Memory** - Context-aware conversations with custom memory implementation
-- ✅ **File Upload** - Support for images and documents (Cloudinary storage)
-- ✅ **Message Editing** - Edit and regenerate previous messages
-- ✅ **Context Window Management** - Smart token counting and trimming
-- ✅ **Conversation History** - Persistent chat storage in MongoDB
-- ✅ **Authentication** - Secure auth with Clerk
-- ✅ **Responsive Design** - Mobile-first, fully responsive UI
+Tech stack
+- Next.js – framework for server-rendered React apps (App Router)
+- TypeScript – statically typed superset of JavaScript
+- Tailwind – utility-first CSS framework for styling
+- Redux – predictable client-side state management (Redux Toolkit)
+- Cloudinary – image hosting, storage and CDN delivery for generated images
+- Gemini – LLM model used for assistant responses
+- Vercel AI SDK – helpers for streaming and client-server model integration
+- MongoDB – document database used for storing conversations/messages
+- Clerk – authentication and user management (client + server integrations)
+- Vercel – deployment and hosting platform
 
-## 🛠️ Tech Stack
+Quick start
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | Next.js 15 (App Router) |
-| **Language** | TypeScript |
-| **AI SDK** | Vercel AI SDK + OpenAI |
-| **Database** | MongoDB + Mongoose |
-| **Authentication** | Clerk |
-| **File Storage** | Cloudinary |
-| **Styling** | TailwindCSS + ShadCN |
-| **UI Design** | v0.dev |
-| **Deployment** | Vercel |
+Prerequisites
+- Node.js 18+ (or the version required by your environment)
+- npm or pnpm
+- MongoDB (connection string)
 
-## 📁 Project Structure
-
-Following [Dub's architecture](https://github.com/dubinc/dub):
-
-```
-galaxy-ai/
-├── app/                      # Next.js app router
-│   ├── api/                  # API routes
-│   │   ├── chat/             # Chat streaming endpoint
-│   │   ├── upload/           # File upload handler
-│   │   └── memory/           # Memory management
-│   ├── (auth)/               # Auth pages (sign-in, sign-up)
-│   ├── (dashboard)/          # Main chat interface
-│   ├── layout.tsx            # Root layout
-│   └── globals.css           # Global styles
-├── lib/                      # Core business logic
-│   ├── db/                   # Database connection & models
-│   │   ├── mongodb.ts        # MongoDB connection
-│   │   └── models.ts         # Mongoose schemas
-│   ├── utils/                # Utility functions
-│   │   └── index.ts          # Helper functions
-│   └── zod/                  # Zod validation schemas
-├── ui/                       # Reusable UI components
-│   └── chat/                 # Chat-specific components
-├── components/               # Shared components
-├── public/                   # Static assets
-└── middleware.ts             # Next.js middleware (Clerk)
-```
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- MongoDB database (local or Atlas)
-- OpenAI API key
-- Clerk account
-- Cloudinary account
-
-### 1. Clone and Install
+Install
 
 ```bash
-git clone <your-repo-url>
-cd galaxy-ai
+cd /path/to/repo
 npm install
+# or: pnpm install
 ```
 
-### 2. Environment Setup
+Environment
 
-Copy `.env.example` to `.env.local` and fill in your credentials:
+Create a `.env.local` file in the project root with the environment variables your deployment requires. The exact names depend on your deployment and secrets; example variables used by this project:
 
-```bash
-# Core App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+# MongoDB connection string
+MONGODB_URI=mongodb+srv://user:pass@cluster.example.mongodb.net/dbname
 
-# OpenAI API
-OPENAI_API_KEY=sk-...
+# Gemini / LLM API key (example name used in code: GEMINI_API_KEY)
+GEMINI_API_KEY=your_gemini_key_here
 
-# MongoDB
-MONGODB_URI=mongodb+srv://...
+# Cloudinary (used for image uploads)
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
 
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
+# Clerk (if using Clerk for auth)
+CLERK_FRONTEND_API=your_clerk_frontend_api
+CLERK_API_KEY=your_clerk_api_key
 
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
+# Any other provider keys (SENTRY, ANALYTICS, etc.)
 ```
 
-### 3. Run Development Server
+Run (development)
 
 ```bash
 npm run dev
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 📝 Key Implementation Details
-
-### 1. **Streaming Chat with Vercel AI SDK**
-
-```typescript
-// app/api/chat/route.ts
-import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-
-export async function POST(req: Request) {
-  const { messages } = await req.json();
-  
-  const result = streamText({
-    model: openai('gpt-4-turbo'),
-    messages,
-  });
-
-  return result.toDataStreamResponse();
-}
-```
-
-### 2. **Context Window Management**
-
-We implement smart token counting to stay within model limits:
-
-```typescript
-// Trim messages to fit context window
-function trimMessages(messages: Message[], maxTokens: number) {
-  // Keep system message + recent messages
-  // Estimate ~4 chars per token
-}
-```
-
-### 3. **MongoDB Schema Design**
-
-Two main collections:
-- **Conversations**: Metadata, title, model, token count
-- **Messages**: Individual messages with role, content, files
-
-### 4. **File Upload Flow**
-
-1. User selects file → Upload to Cloudinary
-2. Get secure URL → Attach to message
-3. Send to OpenAI (vision models for images)
-
-## 🎨 UI Design with v0.dev
-
-All UI components were designed using v0.dev. Here are the prompts used:
-
-### Chat Interface Prompt
-```
-Create a ChatGPT-like interface with:
-- Sidebar for conversation history
-- Main chat area with message bubbles
-- Input field with file upload button
-- Responsive mobile layout
-- Dark mode support
-```
-
-*(See full prompts in `/docs/v0-prompts.md`)*
-
-## 📦 Deployment
-
-### Deploy to Vercel
+Build and run production
 
 ```bash
 npm run build
-vercel --prod
+npm start
 ```
 
-Make sure to add all environment variables in Vercel dashboard.
+Project Structure (high-level)
+- `app/` - Next.js App Router pages and routes (chat, library, api endpoints)
+- `components/` - UI components (chat area, message bubble, sidebar, input area)
+- `lib/` - helper libraries and Redux store (`lib/redux` contains slices and hooks)
+- `utils/`, `db/`, `types/` - utilities, DB models, and TypeScript types
 
-## 🧪 Testing
+Notes and tips
+- Redux state keeps conversations serializable (timestamps stored as ISO strings). Use `toConversationWithDate` to convert when needed.
+- `components/image-actions.tsx` centralizes download/share overlay behavior. The overlay is hover-only on desktop and always-visible on mobile.
+- One-off message handoff from the Library to the Chat page uses `sessionStorage` with keys like `preload:<conversationId>` to avoid duplicate DB writes.
+- Server endpoints live under `app/api/*` (e.g., `/api/chat`, `/api/conversations`, `/api/images`). Consider adding server-side dedup checks if duplicate messages appear.
 
-```bash
-npm run type-check  # TypeScript validation
-npm run lint        # ESLint
-```
+Contributing
+- Follow the existing coding style (TypeScript, Tailwind CSS utility classes).
+- Add small, focused PRs and include a short description of the change and any environment variables needed to test it.
 
-## 📚 Learning Resources
-
-- [Next.js Best Practices](https://nextjs.org/docs)
-- [Vercel AI SDK Docs](https://sdk.vercel.ai/docs)
-- [Dub Repository](https://github.com/dubinc/dub) - Architecture reference
-- [ShadCN UI](https://ui.shadcn.com/)
-
-## 🤝 Contributing
-
-This project follows strict coding standards:
-
-1. **Code Quality**: Clean, readable, modular code
-2. **Type Safety**: Strict TypeScript
-3. **Architecture**: Follow Dub's patterns
-4. **UI/UX**: Pixel-perfect designs from v0.dev
-
-## 📄 License
-
-MIT
-
----
-
-**Built with ❤️ following enterprise-grade standards**
