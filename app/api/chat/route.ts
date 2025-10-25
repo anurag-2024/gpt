@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    console.log("✅ Gemini API Key exists:", !!apiKey)
 
     // Parse request body
     const { messages, conversationId, model = "gemini-2.5-flash", parentMessageId = null, files = [], isTemporaryChat = false }: ChatRequestBody = await req.json();
@@ -45,19 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
     }
 
-    console.log("Received chat request:", { 
-      conversationId, 
-      model, 
-      messageCount: messages.length,
-      parentMessageId,
-      filesInBody: files.length,
-      isTemporaryChat
-    })
-
     // Check if the latest message has image attachments - use vision model
     const lastMessage = messages[messages.length - 1];
-    console.log("Last message structure:", JSON.stringify(lastMessage, null, 2))
-    
     // Check for attachments in both the message and the body
     const attachmentsFromMessage = lastMessage?.experimental_attachments || [];
     const attachmentsFromBody = files || [];
@@ -67,9 +55,7 @@ export async function POST(req: NextRequest) {
       (att.contentType || att.type)?.startsWith("image/")
     );
     const selectedModel = hasImages ? "gemini-2.5-flash" : model;
-    
-    console.log("Total attachments found:", allAttachments.length)
-
+  
     // Connect to MongoDB
     await connectDB();
 
@@ -101,9 +87,6 @@ export async function POST(req: NextRequest) {
       name: att.name,
       size: att.size || 0,
     }));
-    
-    console.log("User query:", userQuery.substring(0, 100))
-    console.log("User files:", userFiles.length)
     
     // Calculate depth based on parent message - needed for image generation too
     let depth = 0;
@@ -139,7 +122,6 @@ export async function POST(req: NextRequest) {
     
     // If this is an image generation request, handle it specially
     if (isImageGenRequest) {
-      console.log("🎨 Detected image generation request");
       
       try {
         // Extract the prompt (remove the trigger phrase)
@@ -152,8 +134,6 @@ export async function POST(req: NextRequest) {
         if (!imagePrompt || imagePrompt.length < 5) {
           imagePrompt = userQuery;
         }
-        
-        console.log("🎨 Extracted image prompt:", imagePrompt.substring(0, 100));
         
         // Call image generation API
         const imageGenResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-image`, {
@@ -170,8 +150,6 @@ export async function POST(req: NextRequest) {
         }
         
         const imageGenResult = await imageGenResponse.json();
-        console.log("✅ Image generated:", imageGenResult.image.url);
-        
         // Save the user message and assistant response with image
         if (!isTemporaryChat && conversation) {
           const messageData: any = {
@@ -191,8 +169,8 @@ export async function POST(req: NextRequest) {
           };
           
           const savedMessage = await Message.create(messageData);
-          console.log("✅ Message with generated image saved:", savedMessage._id);
-          
+            // console.log("✅ Message with generated image saved:", savedMessage._id);
+            
           // Update parent message's branches array
           if (parentMessageId) {
             await Message.findByIdAndUpdate(parentMessageId, {
@@ -234,14 +212,11 @@ export async function POST(req: NextRequest) {
             relevantMemories
               .map((m: any) => `- ${m.memory}`)
               .join("\n");
-          console.log("🧠 Added", relevantMemories.length, "memories as context");
         }
       } catch (memError) {
-        console.error("⚠️ Mem0 error (non-blocking):", memError);
-        // Don't fail the request if memory retrieval fails
       }
     } else {
-      console.log("🔒 Skipping memory retrieval for temporary chat");
+      console.log(" Skipping memory retrieval for temporary chat");
     }
     
     // If we have files, create a modified messages array with attachments
@@ -251,7 +226,6 @@ export async function POST(req: NextRequest) {
       const attachmentsForGemini = await Promise.all(
         userFiles.map(async (f: any) => {
           try {
-            console.log("📥 Downloading file:", f.url, "Type:", f.type)
             const response = await fetch(f.url);
             if (!response.ok) {
               throw new Error(`Fetch failed: ${response.status}`);
@@ -260,16 +234,13 @@ export async function POST(req: NextRequest) {
             const buffer = Buffer.from(arrayBuffer);
             const base64 = buffer.toString('base64');
             const dataUrl = `data:${f.type};base64,${base64}`;
-            
-            console.log("✅ File converted to data URL, base64 length:", base64.length)
-            
+          
             return {
               name: f.name,
               contentType: f.type,
               url: dataUrl,
             };
           } catch (error) {
-            console.error("❌ Error processing file:", error);
             return null;
           }
         })
@@ -283,7 +254,6 @@ export async function POST(req: NextRequest) {
           ...lastMessage,
           experimental_attachments: validAttachments,
         });
-        console.log("✅ Added", validAttachments.length, "attachment(s) via experimental_attachments")
       }
     }
 
@@ -317,17 +287,11 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    console.log("About to call streamText...")
-    console.log("🤖 Gemini model:", selectedModel)
-    console.log("📎 Trimmed messages count:", trimmedMessages.length)
-    console.log("📎 Last message has attachments:", !!trimmedMessages[trimmedMessages.length - 1]?.experimental_attachments)
     
     try {
       let fullResponseText = '';
       let hasStartedStreaming = false;
       
-      console.log("📋 Final message content type:", typeof trimmedMessages[trimmedMessages.length - 1]?.content)
-      console.log("📋 Full last message structure:", JSON.stringify(trimmedMessages[trimmedMessages.length - 1], null, 2).substring(0, 500))
       
       const result = streamText({
         model: google(selectedModel),
@@ -335,23 +299,18 @@ export async function POST(req: NextRequest) {
         temperature: 0.7,
         maxTokens: 8192,
         onChunk({ chunk }) {
-          console.log("📦 Chunk received:", chunk.type)
           
           // Send SSE event on first chunk to immediately hide typing indicator
           if (!hasStartedStreaming) {
             hasStartedStreaming = true;
-            console.log("🎬 First chunk received, streaming started")
           }
         },
         async onFinish({ text, usage, finishReason }) {
-          console.log("🎉 OnFinish called!")
-          console.log("📊 Text length:", text?.length)
-          console.log("📊 Finish reason:", finishReason)
+          
           fullResponseText = text;
           
           // Skip database and memory operations for temporary chats
           if (isTemporaryChat) {
-            console.log("� Skipping DB/memory storage for temporary chat");
             return;
           }
           
@@ -366,11 +325,6 @@ export async function POST(req: NextRequest) {
                 size: Number(f.size) || 0,
               };
             }) : [];
-            
-            console.log("📎 Files to save:", filesToSave.length, "Type:", typeof filesToSave, "Is array:", Array.isArray(filesToSave))
-            if (filesToSave.length > 0) {
-              console.log("📎 First file:", JSON.stringify(filesToSave[0]))
-            }
             
             // Save query-response pair as a single message
             const messageData: any = {
@@ -390,15 +344,10 @@ export async function POST(req: NextRequest) {
             
             const savedMessage = await Message.create(messageData);
 
-            console.log("✅ Query-response pair saved to DB:", savedMessage._id)
-            console.log("✅ Files saved:", filesToSave.length)
-
-            // Update parent message's branches array
             if (parentMessageId) {
               await Message.findByIdAndUpdate(parentMessageId, {
                 $addToSet: { branches: savedMessage._id }
               });
-              console.log("✅ Parent message branches updated")
             }
 
             // Update conversation metadata
@@ -407,31 +356,22 @@ export async function POST(req: NextRequest) {
               totalTokens: (conversation!.totalTokens || 0) + (usage?.totalTokens || 0),
             });
             
-            console.log("✅ Conversation metadata updated")
-            
             // 🧠 Store memories in Mem0 for future context
             try {
               await addMemories(userId, conversation!._id.toString(), [
                 { role: "user", content: userQuery },
                 { role: "assistant", content: text },
               ]);
-              console.log("🧠 Memories stored in Mem0");
             } catch (memError) {
-              console.error("⚠️ Mem0 storage error (non-blocking):", memError);
-              // Don't fail the request if memory storage fails
+              
             }
             
           } catch (error) {
             console.error("❌ Error saving message:", error);
-            console.error("❌ Error details:", error instanceof Error ? error.message : error);
-            console.error("❌ Error stack:", error instanceof Error ? error.stack : '');
-            // Don't throw - let the stream complete successfully even if save fails
           }
         },
       });
-      
-      console.log("✅ streamText result created, returning response...")
-      
+    
       // Return the data stream response
       const response = result.toDataStreamResponse();
       
@@ -440,8 +380,6 @@ export async function POST(req: NextRequest) {
       return response;
       
     } catch (streamError: any) {
-      console.error("❌ Gemini streaming error:", streamError);
-      console.error("❌ Error stack:", streamError.stack);
       
       return new Response(
         JSON.stringify({ error: streamError.message || "Gemini API error" }),

@@ -41,6 +41,7 @@ function HomeContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [currentBranchIndices, setCurrentBranchIndices] = useState<Map<string, number>>(new Map())
+  const [isConversationLoading, setIsConversationLoading] = useState(false)
   const [isEditingResponse, setIsEditingResponse] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState("")
   const [isTemporaryChat, setIsTemporaryChat] = useState(false)
@@ -76,18 +77,15 @@ function HomeContent() {
     onResponse: (response) => {
       if (!response.ok) {
         toast.error("Failed to get response from AI")
-        console.error("Chat API error:", response)
       } else {
-        console.log("✅ Chat response received successfully")
+        // console.log(" Chat response received successfully")
       }
     },
     onError: (error) => {
-      toast.error(error.message || "An error occurred")
+      // toast.error(error.message || "An error occurred")
       console.error("❌ Chat error:", error)
     },
     onFinish: (message) => {
-      console.log("✅ Chat finished:", message)
-      // Reload conversations after message is complete (skip if temporary)
       if (!isTemporaryChat) {
         dispatch(fetchConversations())
         // Also reload current conversation to get generatedImages and other DB fields
@@ -186,15 +184,14 @@ function HomeContent() {
   const handleSendMessage = async (content: string, files?: any[]) => {
     if (!content.trim() && (!files || files.length === 0)) return
 
-    console.log("Sending message:", { content, files, currentConversationId, isTemporaryChat })
-
+    
     try {
       let conversationIdToUse = currentConversationId
       const isNewConversation = !conversationIdToUse
 
       // If no current conversation and NOT temporary, create one first
       if (!conversationIdToUse && !isTemporaryChat) {
-        console.log("Creating new conversation...")
+        
         const response = await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -205,7 +202,7 @@ function HomeContent() {
 
         const data = await response.json()
         conversationIdToUse = data.conversation._id
-        console.log("Conversation created:", conversationIdToUse)
+       
         setCurrentConversationId(conversationIdToUse)
         dispatch(fetchConversations())
       }
@@ -221,18 +218,14 @@ function HomeContent() {
         size: file.size || 0,
       })) || []
       
-      console.log("Appending message to chat with conversationId:", conversationIdToUse)
-      console.log("Files to attach:", files?.length || 0)
-      console.log("Is temporary chat:", isTemporaryChat)
+      
       
       // For new conversations, we need to call the API directly because useChat isn't initialized yet
       if (isNewConversation || isTemporaryChat) {
-        console.log('🚀 Using manual streaming mode')
-        console.log('📊 Current messages before adding user message:', messages.length)
         
         // Store previous messages before adding user message
         const previousMessages = [...messages]
-        console.log('💾 Stored previous messages:', previousMessages.length)
+       
         
         // Add user message to UI immediately
         const userMessage = {
@@ -245,10 +238,8 @@ function HomeContent() {
         
         // For temporary chat, append to existing messages; for new conversation, start fresh
         if (isTemporaryChat && messages.length > 0) {
-          console.log('📝 Appending to existing messages')
           setMessages([...messages, userMessage])
         } else {
-          console.log('📝 Starting fresh with user message')
           setMessages([userMessage])
         }
         
@@ -257,7 +248,6 @@ function HomeContent() {
         setIsStreamingContent(false)
 
         // Call chat API directly
-        console.log('📤 Sending request to /api/chat')
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -270,12 +260,10 @@ function HomeContent() {
         })
 
         if (!response.ok) {
-          console.error('❌ Response not OK:', response.status)
           setIsEditingResponse(false)
           throw new Error('Failed to get AI response')
         }
 
-        console.log('✅ Got response, starting to read stream')
         
         // Handle streaming response
         const reader = response.body?.getReader()
@@ -284,29 +272,18 @@ function HomeContent() {
         const assistantMsgId = `temp-assistant-${Date.now()}`
 
         if (reader) {
-          console.log('📖 Starting to read stream...')
+          
           while (true) {
             const { done, value } = await reader.read()
             if (done) {
-              console.log('✅ Stream reading complete, final message length:', assistantMessage.length)
               break
             }
 
             const chunk = decoder.decode(value)
             const lines = chunk.split('\n')
-            console.log('📦 Processing', lines.length, 'lines')
-            
-            // Log first few lines to see the format
-            if (lines.length > 0) {
-              console.log('📋 First line:', lines[0].substring(0, 100))
-              if (lines.length > 1) {
-                console.log('📋 Second line:', lines[1].substring(0, 100))
-              }
-            }
 
             for (const line of lines) {
-              console.log('🔍 Checking line:', line.substring(0, 50), 'starts with 0:?', line.startsWith('0:'))
-              
+             
               // Vercel AI SDK data stream format:
               // 0:"text content" - text chunks (content is a JSON string)
               // e: - errors
@@ -316,29 +293,24 @@ function HomeContent() {
                   // The format is 0:"text content" or 0:{"content":"text"}
                   const jsonStr = line.substring(2).trim()
                   if (jsonStr) {
-                    console.log('🔍 JSON string:', jsonStr.substring(0, 50))
                     
                     // Try parsing as a plain string first (most common format)
                     if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
                       const textContent = JSON.parse(jsonStr)
                       assistantMessage += textContent
-                      console.log('📝 Added text chunk, total length:', assistantMessage.length)
                     } else {
                       // Try parsing as an object with content property
                       const parsed = JSON.parse(jsonStr)
                       if (parsed.content) {
                         assistantMessage += parsed.content
-                        console.log('📝 Added content chunk, total length:', assistantMessage.length)
                       }
                     }
                     
-                    console.log('📝 Assistant message length:', assistantMessage.length, 'previousMessages:', previousMessages.length)
                     
                     // Mark that we're streaming content (hide typing indicator)
                     if (assistantMessage.length > 0 && !isStreamingContent) {
                       setIsStreamingContent(true)
                       setIsEditingResponse(false)
-                      console.log('🎬 Started streaming content')
                     }
                     
                     // Update UI with streaming response in chunks
@@ -353,12 +325,11 @@ function HomeContent() {
                         createdAt: new Date(),
                       }
                     ]
-                    console.log('💬 Setting messages, total count:', newMessages.length, 'structure:', newMessages.map(m => ({ role: m.role, contentLength: m.content.length })))
                     setMessages(newMessages)
                   }
                 } catch (e) {
                   // Ignore JSON parse errors for incomplete chunks
-                  console.error('JSON parse error:', e)
+                  // console.error('JSON parse error:', e)
                 }
               }
             }
@@ -390,11 +361,8 @@ function HomeContent() {
             name: file.name,
             contentType: file.type,
           }))
-          console.log("Adding attachments:", messageToSend.experimental_attachments)
         }
-        
-        console.log("Message to send:", JSON.stringify(messageToSend, null, 2))
-        
+
         // Use append to send the message with experimental_attachments for images
         // The conversationId will be sent via the body parameter in useChat
         // Also send files in body as backup
@@ -424,13 +392,11 @@ function HomeContent() {
         }
       }
       
-      console.log("Message sent successfully")
     } catch (error) {
       // Clear loading state on error
       setIsEditingResponse(false)
       setIsStreamingContent(false)
-      toast.error("Failed to send message")
-      console.error("Send message error:", error)
+      // console.error("Send message error:", error)
     }
   }
 
@@ -449,8 +415,7 @@ function HomeContent() {
       await dispatch(renameConversation({ conversationId, newTitle })).unwrap()
       toast.success('Conversation renamed')
     } catch (error) {
-      toast.error('Failed to rename conversation')
-      console.error('Rename error:', error)
+      // console.error('Rename error:', error)
     }
   }
 
@@ -468,12 +433,12 @@ function HomeContent() {
       toast.success('Conversation deleted')
     } catch (error) {
       toast.error('Failed to delete conversation')
-      console.error('Delete error:', error)
     }
   }
 
   // Load messages for a specific conversation
   const handleSelectConversation = async (conversationId: string, preloadMessage?: string) => {
+    setIsConversationLoading(true)
     try {
       setCurrentConversationId(conversationId)
       setIsTemporaryChat(false) // Disable temporary chat when selecting a conversation
@@ -609,7 +574,7 @@ function HomeContent() {
       })
       setCurrentBranchIndices(newBranchIndices)
       
-      setMessages(displayedMessages)
+  setMessages(displayedMessages)
       // If a preloadMessage was provided, trigger useChat.append so the AI response streams in chunks
       if (preloadMessage) {
         try {
@@ -621,12 +586,12 @@ function HomeContent() {
             }
           })
         } catch (err) {
-          console.error('Failed to stream assistant response after preload:', err)
+          // console.error('Failed to stream assistant response after preload:', err)
         }
       }
     } catch (error) {
-      toast.error("Failed to load conversation")
-      console.error(error)
+    } finally {
+      setIsConversationLoading(false)
     }
   }
 
@@ -636,7 +601,6 @@ function HomeContent() {
     if (!currentConversationId && !isTemporaryChat) return
     
     try {
-      console.log("Editing message:", messageId, "New content:", newContent)
       
       // Set loading state for typing indicator
       setIsEditingResponse(true)
@@ -698,19 +662,18 @@ function HomeContent() {
               try {
                 const jsonStr = line.substring(2).trim()
                 if (jsonStr) {
-                  console.log('🔍 [Edit] Parsing:', jsonStr.substring(0, 50))
-                  
+                 
                   // Try parsing as a plain string first (most common format)
                   if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
                     const textContent = JSON.parse(jsonStr)
                     assistantMessage += textContent
-                    console.log('📝 [Edit] Added text chunk, total length:', assistantMessage.length)
+                    
                   } else {
                     // Try parsing as an object with content property
                     const parsed = JSON.parse(jsonStr)
                     if (parsed.content) {
                       assistantMessage += parsed.content
-                      console.log('📝 [Edit] Added content chunk, total length:', assistantMessage.length)
+                     
                     }
                   }
                   
@@ -730,11 +693,11 @@ function HomeContent() {
                   if (assistantMessage.length > 0 && !isStreamingContent) {
                     setIsStreamingContent(true)
                     setIsEditingResponse(false)
-                    console.log('🎬 [Edit] Started streaming content')
+                    
                   }
                 }
               } catch (e) {
-                console.error('[Edit] JSON parse error:', e)
+                // console.error('[Edit] JSON parse error:', e)
               }
             }
           }
@@ -764,7 +727,6 @@ function HomeContent() {
     if (!currentConversationId && !isTemporaryChat) return
     
     try {
-      console.log("Regenerating response for message:", messageId)
       
       // Set loading state for typing indicator
       setIsEditingResponse(true)
@@ -821,19 +783,18 @@ function HomeContent() {
               try {
                 const jsonStr = line.substring(2).trim()
                 if (jsonStr) {
-                  console.log('🔍 [Regenerate] Parsing:', jsonStr.substring(0, 50))
                   
                   // Try parsing as a plain string first (most common format)
                   if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
                     const textContent = JSON.parse(jsonStr)
                     assistantMessage += textContent
-                    console.log('📝 [Regenerate] Added text chunk, total length:', assistantMessage.length)
+                    
                   } else {
                     // Try parsing as an object with content property
                     const parsed = JSON.parse(jsonStr)
                     if (parsed.content) {
                       assistantMessage += parsed.content
-                      console.log('📝 [Regenerate] Added content chunk, total length:', assistantMessage.length)
+                      
                     }
                   }
                   
@@ -852,11 +813,11 @@ function HomeContent() {
                   if (assistantMessage.length > 0 && !isStreamingContent) {
                     setIsStreamingContent(true)
                     setIsEditingResponse(false)
-                    console.log('🎬 [Regenerate] Started streaming content')
+                    
                   }
                 }
               } catch (e) {
-                console.error('[Regenerate] JSON parse error:', e)
+                // console.error('[Regenerate] JSON parse error:', e)
               }
             }
           }
@@ -874,7 +835,6 @@ function HomeContent() {
       }
       
     } catch (error: any) {
-      console.error("Regenerate error:", error)
       toast.error(error.message || "Failed to regenerate response")
     } finally {
       // Always clear loading state
@@ -902,7 +862,30 @@ function HomeContent() {
         }}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        {messages.length === 0 ? (
+        {isConversationLoading ? (
+          /* Skeleton loading state while conversation messages load */
+          <>
+            <div className="px-4 py-3">
+              <div className="max-w-7xl mx-auto">
+                <div className="h-9 w-40 bg-muted rounded-md animate-pulse mx-auto" />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="max-w-3xl mx-auto space-y-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className={`h-12 ${i % 2 === 0 ? 'md:w-3/4' : 'md:w-1/2'} w-full bg-muted rounded-xl animate-pulse`} />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 border-t border-border/50 bg-background">
+              <div className="max-w-3xl mx-auto px-6 py-4">
+                <div className="h-12 bg-muted rounded-[26px] animate-pulse" />
+              </div>
+            </div>
+          </>
+        ) : messages.length === 0 ? (
           /* Empty state - centered welcome with input */
           <>
             {/* Top Navigation Bar - Hide model selector on mobile, show upgrade and temp chat buttons */}
@@ -1120,7 +1103,7 @@ function HomeContent() {
               </div>
             ) : (
               /* Regular Chat Mode Top Bar */
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#2f2f2f]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#2f2f2f] md:hidden">
                 {/* Left side - Hamburger menu (mobile) + ChatGPT button */}
                 <div className="flex items-center gap-2">
                   {/* Hamburger menu - only visible on mobile */}

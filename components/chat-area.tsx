@@ -9,6 +9,7 @@ import { MoreHorizontal, Share2, Archive, Flag, Trash2 } from "lucide-react"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { toast } from "sonner"
 import type { ChatAreaProps, ExtendedMessage } from "@/types"
+import { ChatGPTModelSelector } from "./chatgpt-model-selector"
 
 export function ChatArea({ 
   messages, 
@@ -21,7 +22,7 @@ export function ChatArea({
 }: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-
+  const [selectedModel, setSelectedModel] = useState<"chatgpt" | "chatgpt-go">("chatgpt")
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -40,6 +41,11 @@ export function ChatArea({
     }
   }
 
+  const handleModelSelect = (modelId: "chatgpt" | "chatgpt-go") => {
+      setSelectedModel(modelId)
+      toast.success(`Switched to ${modelId === "chatgpt" ? "ChatGPT" : "ChatGPT Go"}`)
+    }
+  
   const handleArchive = () => {
     toast.info("Archive feature coming soon!")
   }
@@ -67,7 +73,16 @@ export function ChatArea({
       {/* Top Bar with Share and Menu - Only show when there's a conversation and on desktop */}
       {conversationId && messages.length > 0 && (
         <div className="sticky top-0 z-10 bg-background backdrop-blur-sm border-b border-border/20 hidden md:block">
-          <div className="w-full px-4 py-2 flex items-center justify-end">
+          <div className="w-full px-4 py-2 flex items-center justify-between">
+            {/* Left: Model selector */}
+            <div className="flex items-center gap-1">
+              <ChatGPTModelSelector
+                selectedModel={selectedModel}
+                onModelSelect={handleModelSelect}
+              />
+            </div>
+
+            {/* Right: Share + More menu */}
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -78,6 +93,7 @@ export function ChatArea({
                 <Share2 className="h-4 w-4" />
                 <span className="hidden sm:inline text-sm">Share</span>
               </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

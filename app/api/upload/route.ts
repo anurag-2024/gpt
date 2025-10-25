@@ -213,8 +213,7 @@ export async function POST(req: NextRequest) {
         // Determine resource type
         const resourceType = file.type.startsWith("image/") ? "image" : "raw";
 
-        console.log(`✅ Uploading validated file: ${sanitizedName} (${(file.size / 1024).toFixed(2)}KB)`);
-
+        
         // 8. Upload to Cloudinary
         const result = await cloudinary.uploader.upload(base64, {
           resource_type: resourceType,
@@ -233,10 +232,7 @@ export async function POST(req: NextRequest) {
           format: result.format,
         });
 
-        console.log(`✅ File uploaded successfully: ${result.secure_url}`);
-
       } catch (fileError: any) {
-        console.error(`❌ Error processing ${file.name}:`, fileError);
         errors.push(`${file.name}: ${fileError.message || "Upload failed"}`);
       }
     }

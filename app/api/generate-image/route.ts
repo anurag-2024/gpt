@@ -38,15 +38,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log("🎨 Generating image with Pollinations.ai, prompt:", prompt.substring(0, 100));
-
     // Use Pollinations.ai - free image generation API
     // It uses Flux models under the hood
     const encodedPrompt = encodeURIComponent(prompt.trim());
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&model=flux`;
     
-    console.log("📥 Fetching generated image from Pollinations.ai...");
     
     // Fetch the generated image
     const imageResponse = await fetch(imageUrl, {
@@ -61,22 +57,19 @@ export async function POST(req: NextRequest) {
       throw new Error(`Image generation failed: ${imageResponse.status}`);
     }
 
-    console.log("✅ Image fetched successfully");
-
+    
     // Convert to buffer and then base64
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
     const base64Image = `data:image/png;base64,${imageBuffer.toString("base64")}`;
 
     // Upload to Cloudinary
-    console.log("☁️ Uploading to Cloudinary...");
+   
     const cloudinaryResult = await cloudinary.uploader.upload(base64Image, {
       resource_type: "image",
       folder: `galaxy-ai/user_${userId}/generated`,
       use_filename: false,
       unique_filename: true,
     });
-
-    console.log("✅ Uploaded to Cloudinary:", cloudinaryResult.secure_url);
 
     // Connect to MongoDB and save image metadata
     await connectDB();
@@ -94,8 +87,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("✅ Image metadata saved to DB:", savedImage._id);
-
     return NextResponse.json({
       success: true,
       image: {
@@ -107,8 +98,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("❌ Image generation error:", error);
-    
     // Handle specific errors
     if (error?.status === 400) {
       return NextResponse.json(

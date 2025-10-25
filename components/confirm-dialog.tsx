@@ -56,7 +56,6 @@ export function ConfirmDialog({
                 <button
                   onClick={() => {
                     // Navigate to settings or open settings dialog
-                    console.log("Navigate to settings")
                   }}
                   className="underline hover:text-zinc-300 transition-colors"
                 >

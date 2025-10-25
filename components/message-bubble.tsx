@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, Edit2, RotateCcw, Check, ChevronLeft, ChevronRight } from "lucide-react"
+import { Copy, Edit2, RotateCcw, Check, ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAppSelector } from "@/lib/redux/hooks"
+import { toast } from "sonner"
+import ImageActions from "@/components/image-actions"
 import ReactMarkdown from "react-markdown"
 import type { MessageBubbleProps } from "@/types"
 
@@ -148,12 +150,17 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
                   {message.files.map((file, index) => (
                     <div key={index} className="relative">
                       {file.type.startsWith('image/') ? (
-                        <img
-                          src={file.url}
-                          alt={file.name}
-                          className="max-w-xs rounded-lg border border-primary-foreground/20"
-                          style={{ maxHeight: '200px' }}
-                        />
+                        <div className="group relative">
+                          <img
+                            src={file.url}
+                            alt={file.name}
+                            className="max-w-xs rounded-lg border border-primary-foreground/20"
+                            style={{ maxHeight: '200px' }}
+                          />
+
+                          {/* Image action buttons - same behavior as library: hover on desktop, always visible on mobile */}
+                          <ImageActions url={file.url} filename={file.name} caption={file.name} />
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2 rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded bg-primary-foreground/20">
@@ -197,6 +204,9 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
                         style={{ width: '500px', height: '500px' }}
                         onLoad={() => setImageLoaded(prev => ({ ...prev, [index]: true }))}
                       />
+
+                      <ImageActions url={image.url} caption={image.caption || image.prompt} />
+
                       {imageLoaded[index] && (image.caption || image.prompt) && (
                         <div className="mt-2 text-xs text-muted-foreground italic max-w-[500px]">
                           AI Generated Image

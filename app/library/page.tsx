@@ -220,7 +220,7 @@ function LibraryContent() {
       )}
 
       {/* Mobile title - center/right side, left of three-dot menu */}
-      <div className="fixed left-1/2 transform -translate-x-1/2 top-4 z-40 md:hidden">
+      <div className="fixed left-1/2 transform -translate-x-1/2 top-4 z-2 md:hidden">
         <h1 className="text-lg font-semibold">Images</h1>
       </div>
 
@@ -258,13 +258,6 @@ function LibraryContent() {
         <div className="hidden md:block flex-shrink-0 px-6 pt-6 pb-4 border-b border-border/50">
           <div className="max-w-7xl mx-auto">
             <h1 className="text-2xl font-semibold mb-1">Images</h1>
-            {/* <p className="text-sm text-muted-foreground">
-              {images === null || isLoading 
-                ? "Loading..." 
-                : images.length === 0 
-                ? "No images yet" 
-                : `${images.length} ${images.length === 1 ? 'image' : 'images'}`}
-            </p> */}
           </div>
         </div>
 
