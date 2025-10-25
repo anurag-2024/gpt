@@ -112,7 +112,30 @@ function HomeContent() {
   // Check if there's a conversation ID in the URL
   useEffect(() => {
     const conversationIdFromUrl = searchParams.get('c')
-    const preloadMessage = searchParams.get('preloadMessage')
+    const preloadMessageFromUrl = searchParams.get('preloadMessage')
+    const fromParam = searchParams.get('from')
+    const sidebarParam = searchParams.get('sidebar')
+
+    // If navigation included sidebar=false, close sidebar
+    if (sidebarParam === 'false') {
+      setSidebarOpen(false)
+    }
+
+    let preloadMessage: string | null | undefined = preloadMessageFromUrl
+    // If navigation came from library, prefer sessionStorage to get the original message (prevents duplicates)
+    if (!preloadMessage && fromParam === 'library' && typeof window !== 'undefined' && conversationIdFromUrl) {
+      try {
+        const stored = sessionStorage.getItem(`preload:${conversationIdFromUrl}`)
+        if (stored) {
+          preloadMessage = stored
+          // Remove after consuming to prevent duplicate sends
+          sessionStorage.removeItem(`preload:${conversationIdFromUrl}`)
+        }
+      } catch (e) {
+        console.warn('Failed to read preload from sessionStorage', e)
+      }
+    }
+
     if (conversationIdFromUrl) {
       // pass preloadMessage (if provided) so the UI can show the user's message immediately
       handleSelectConversation(conversationIdFromUrl, preloadMessage || undefined)

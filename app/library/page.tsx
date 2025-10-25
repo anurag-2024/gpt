@@ -5,7 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { InputArea } from "@/components/input-area"
 import { toast } from "sonner"
-import { Download, Share2 } from "lucide-react"
+import { Download, Share2, Menu, MoreHorizontal } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { IImage } from "@/types"
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { fetchConversations, renameConversation, deleteConversation, toConversationWithDate } from "@/lib/redux/slices/conversationsSlice"
@@ -113,7 +120,16 @@ function LibraryContent() {
       // Note: we intentionally do NOT send the initial message here to avoid duplicate messages.
       // The main chat page will handle sending/streaming the message via its `append` (useChat) call when it sees the preloadMessage.
       const encoded = encodeURIComponent(message)
-      router.push(`/?c=${conversationId}&preloadMessage=${encoded}`)
+      // Store the preload message in sessionStorage keyed by conversation id so main page can read it
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`preload:${conversationId}`, message)
+        }
+      } catch (e) {
+        console.warn('Failed to set preload in sessionStorage', e)
+      }
+      // Navigate to chat with new conversation. Include a marker (from=library) and sidebar=false
+      router.push(`/?c=${conversationId}&from=library&sidebar=false`)
     } catch (err: any) {
       console.error('Failed to start chat from library:', err)
       toast.error(err.message || 'Failed to start chat')
@@ -191,36 +207,91 @@ function LibraryContent() {
         }}
       />
 
-      <main className="flex-1 overflow-auto p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-md font-semibold border-b border-muted-foreground">Images</h4>
-            <div className="text-sm text-muted-foreground">Showing AI-generated images</div>
+      {/* Mobile hamburger menu - only show when sidebar is closed */}
+      {!sidebarOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed left-4 top-4 z-50 md:hidden"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+
+      {/* Mobile title - center/right side, left of three-dot menu */}
+      <div className="fixed left-1/2 transform -translate-x-1/2 top-4 z-40 md:hidden">
+        <h1 className="text-lg font-semibold">Images</h1>
+      </div>
+
+      {/* Three-dot menu button - top right */}
+      <div className="fixed right-4 top-4 z-40">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-[#2f2f2f]"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-56 bg-[#2f2f2f] border-[#4e4e4e] text-[#ececec]"
+          >
+            <DropdownMenuItem className="cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
+              Help & FAQ
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer hover:bg-[#212121] focus:bg-[#212121]">
+              Download all images
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Header - only show on desktop */}
+        <div className="hidden md:block flex-shrink-0 px-6 pt-6 pb-4 border-b border-border/50">
+          <div className="max-w-7xl mx-auto">
+            <h1 className="text-2xl font-semibold mb-1">Images</h1>
+            {/* <p className="text-sm text-muted-foreground">
+              {images === null || isLoading 
+                ? "Loading..." 
+                : images.length === 0 
+                ? "No images yet" 
+                : `${images.length} ${images.length === 1 ? 'image' : 'images'}`}
+            </p> */}
           </div>
+        </div>
 
-          {/* Content area */}
-          {isLoading || images === null ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-40 w-full rounded-lg bg-[#1f1f1f] animate-pulse" />
-              ))}
-            </div>
-          ) : images.length === 0 ? (
-            <div className="flex flex-col items-center justify-center mt-[20%]">
-              <h2 className="text-xl font-medium mb-2">Visualize anything, find it here</h2>
-              <p className="text-center text-muted-foreground max-w-lg text-sm">
-                Ask ChatGPT to turn any idea into an image, diagram, or visual.
-              </p>
-
-              <div className="w-full max-w-3xl mt-12 px-4" />
-            </div>
-          ) : (
-            <div>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1">
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 mt-16 md:mt-0">{/* Added mt-16 for mobile spacing */}
+          <div className="max-w-7xl mx-auto">
+            {isLoading || images === null ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="aspect-square rounded-lg bg-[#1f1f1f] animate-pulse" />
+                ))}
+              </div>
+            ) : images.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                <div className="max-w-md text-center">
+                  <h2 className="text-xl font-semibold mb-3">Visualize anything, find it here</h2>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Ask ChatGPT to turn any idea into an image, diagram, or visual. All your generated images will appear here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {images.map((img) => (
                   <div 
                     key={img._id} 
-                    className="group relative rounded-xs overflow-hidden bg-[#1f1f1f] border border-border hover:border-[#3f3f3f] transition-all cursor-pointer aspect-square"
+                    className="group relative rounded-lg overflow-hidden bg-[#1f1f1f] border border-border/50 hover:border-[#3f3f3f] transition-all cursor-pointer aspect-square"
                   >
                     <img 
                       src={img.url} 
@@ -228,40 +299,48 @@ function LibraryContent() {
                       className="w-full h-full object-cover" 
                     />
                     
-                    {/* Bottom action buttons - always visible on hover */}
-                    <div className="absolute left-0 right-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Bottom action buttons - always visible on mobile, visible on hover for desktop */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <div className="flex items-center justify-between">
                         {/* Download button - bottom left */}
                         <button
-                          onClick={() => handleDownloadImage(img.url, img.caption)}
-                          className="p-2.5 rounded-full cursor-pointer text-white hover:bg-white/10 transition-all hover:scale-110"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDownloadImage(img.url, img.caption)
+                          }}
+                          className="p-2 rounded-full text-white hover:bg-white/20 transition-all"
                           title="Download image"
                         >
-                          <Download className="h-5 w-5" />
+                          <Download className="h-4 w-4 md:h-5 md:w-5" />
                         </button>
                         
                         {/* Share button - bottom right */}
                         <button
-                          onClick={() => handleShareImage(img.url, img.caption)}
-                          className="p-2.5 rounded-full cursor-pointer text-white hover:bg-white/10 transition-all hover:scale-110"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleShareImage(img.url, img.caption)
+                          }}
+                          className="p-2 rounded-full text-white hover:bg-white/20 transition-all"
                           title="Share image"
                         >
-                          <Share2 className="h-5 w-5" />
+                          <Share2 className="h-4 w-4 md:h-5 md:w-5" />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Fixed input area at bottom */}
+        <div className="flex-shrink-0 border-t border-border/50 bg-background">
+          <div className="max-w-4xl mx-auto px-3 py-2">
+            <InputArea onSendMessage={handleSendMessage} />
+          </div>
         </div>
       </main>
-
-      {/* InputArea - fixed at bottom for the library page */}
-      <div className="fixed left-[58%] transform -translate-x-1/2 bottom-6 w-full max-w-3xl px-0">
-        <InputArea onSendMessage={handleSendMessage} />
-      </div>
     </div>
   )
 }

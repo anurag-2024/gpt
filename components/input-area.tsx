@@ -151,7 +151,7 @@ export function InputArea({ onSendMessage, isStreaming = false, onStop }: InputA
         )}
 
         {/* Input Area - Exact ChatGPT Style */}
-        <div className="relative rounded-[26px] border border-border/40 bg-[#2f2f2f] shadow-[0_0_0_1px_rgba(0,0,0,0.1)]">
+  <div className="relative rounded-[26px] border border-border/40 bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-2 px-4 py-3">
             {/* File Upload */}
             <input
