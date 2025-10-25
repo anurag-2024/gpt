@@ -23,25 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ChatGPTModelSelector } from "@/components/chatgpt-model-selector"
-
-interface Conversation {
-  id: string
-  title: string
-  preview: string
-  timestamp: Date
-  messages: any[]
-}
-
-// Extend Message type to include pairId and files
-interface ExtendedMessage extends Message {
-  pairId?: string
-  files?: Array<{
-    url: string
-    type: string
-    name: string
-    size?: number
-  }>
-}
+import type { Conversation, ExtendedMessage } from "@/types"
 
 export default function Home() {
   const router = useRouter()

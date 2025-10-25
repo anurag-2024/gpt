@@ -6,38 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useUser } from "@clerk/nextjs"
 import ReactMarkdown from "react-markdown"
-import type { Message as UIMessage } from "ai/react"
-
-interface FileAttachment {
-  url: string
-  type: string
-  name: string
-  size?: number
-}
-
-interface GeneratedImage {
-  url: string
-  publicId?: string
-  caption?: string
-  prompt?: string
-}
-
-interface MessageBubbleProps {
-  message: UIMessage & { 
-    files?: FileAttachment[]
-    generatedImages?: GeneratedImage[]
-  }
-  onEdit?: (messageId: string, newContent: string) => void
-  onRegenerate?: (messageId: string) => void
-  isLastUserMessage?: boolean
-  isLastAssistantMessage?: boolean
-  branchInfo?: {
-    current: number
-    total: number
-    onPrevBranch?: () => void
-    onNextBranch?: () => void
-  }
-}
+import type { MessageBubbleProps } from "@/types"
 
 export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage, isLastAssistantMessage, branchInfo }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false)

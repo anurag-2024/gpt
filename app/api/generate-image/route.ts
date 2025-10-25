@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { v2 as cloudinary } from "cloudinary";
 import { connectDB } from "@/lib/db/mongodb";
 import { Image } from "@/lib/db/models";
+import type { ImageGenerationBody } from "@/types/backend";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt } = await req.json();
+    const { prompt }: ImageGenerationBody = await req.json();
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return NextResponse.json(

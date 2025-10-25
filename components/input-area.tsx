@@ -6,22 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { Paperclip, Square, X, Loader2, ArrowUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-
-interface UploadedFile {
-  id: string
-  name: string
-  size: number
-  type: string
-  preview?: string
-  url?: string
-  publicId?: string
-}
-
-interface InputAreaProps {
-  onSendMessage: (message: string, files?: UploadedFile[]) => void
-  isStreaming?: boolean
-  onStop?: () => void
-}
+import type { InputAreaProps, FileAttachment as UploadedFile } from "@/types"
 
 export function InputArea({ onSendMessage, isStreaming = false, onStop }: InputAreaProps) {
   const [input, setInput] = useState("")
@@ -155,7 +140,7 @@ export function InputArea({ onSendMessage, isStreaming = false, onStop }: InputA
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 shrink-0"
-                  onClick={() => removeFile(file.id)}
+                  onClick={() => file.id && removeFile(file.id)}
                   suppressHydrationWarning
                 >
                   <X className="h-4 w-4" />

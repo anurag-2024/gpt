@@ -8,28 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Share2, Archive, Flag, Trash2 } from "lucide-react"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { toast } from "sonner"
-import type { Message as UIMessage } from "ai/react"
-
-interface ExtendedMessage extends UIMessage {
-  pairId?: string
-  branches?: string[]
-  branchCount?: number
-  branchIndex?: number
-}
-
-interface ChatAreaProps {
-  messages: ExtendedMessage[]
-  isLoading?: boolean
-  onEditMessage?: (messageId: string, newContent: string) => void
-  onRegenerateResponse?: (messageId: string) => void
-  onPreviousBranch?: (pairId: string) => void
-  onNextBranch?: (pairId: string, totalBranches: number) => void
-  currentBranchIndices?: Map<string, number>
-  conversationId?: string | null
-  conversationTitle?: string
-  onDeleteConversation?: (conversationId: string) => void
-  userName?: string
-}
+import type { ChatAreaProps, ExtendedMessage } from "@/types"
 
 export function ChatArea({ 
   messages, 

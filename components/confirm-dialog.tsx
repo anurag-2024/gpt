@@ -10,19 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface ConfirmDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onConfirm: () => void
-  title: string
-  description?: string
-  highlightedText?: string
-  confirmText?: string
-  cancelText?: string
-  variant?: "default" | "destructive"
-  showSettingsLink?: boolean
-}
+import type { ConfirmDialogProps } from "@/types"
 
 export function ConfirmDialog({
   open,

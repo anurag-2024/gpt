@@ -9,11 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-interface ChatGPTModelSelectorProps {
-  selectedModel: "chatgpt" | "chatgpt-go"
-  onModelSelect: (modelId: "chatgpt" | "chatgpt-go") => void
-}
+import type { ChatGPTModelSelectorProps } from "@/types"
 
 export function ChatGPTModelSelector({ selectedModel, onModelSelect }: ChatGPTModelSelectorProps) {
   const router = useRouter()

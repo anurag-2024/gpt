@@ -7,16 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { InputArea } from "@/components/input-area"
 import { toast } from "sonner"
 import { Download, Share2 } from "lucide-react"
-
-interface IImage {
-  _id: string
-  userId: string
-  url: string
-  publicId?: string
-  caption?: string
-  metadata?: any
-  createdAt: string
-}
+import type { IImage } from "@/types"
 
 export default function LibraryPage() {
   const router = useRouter()

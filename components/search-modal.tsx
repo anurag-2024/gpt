@@ -4,14 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search, X, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
-interface Conversation {
-  id: string
-  title: string
-  preview: string
-  timestamp: Date
-  messages: any[]
-}
+import type { Conversation } from "@/types"
 
 interface SearchModalProps {
   open: boolean

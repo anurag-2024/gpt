@@ -5,6 +5,7 @@ import { Message, Conversation } from "@/lib/db/models";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { searchMemories, addMemories } from "@/lib/mem0/client";
+import type { ChatRequestBody } from "@/types/backend";
 
 // Mark as Node.js runtime for streaming
 export const runtime = "nodejs";
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     console.log("✅ Gemini API Key exists:", !!apiKey)
 
     // Parse request body
-    const { messages, conversationId, model = "gemini-2.5-flash", parentMessageId = null, files = [], isTemporaryChat = false } = await req.json();
+    const { messages, conversationId, model = "gemini-2.5-flash", parentMessageId = null, files = [], isTemporaryChat = false }: ChatRequestBody = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });

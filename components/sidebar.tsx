@@ -10,33 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { SignOutButton } from "@clerk/nextjs"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { SearchModal } from "@/components/search-modal"
-
-interface Conversation {
-  id: string
-  title: string
-  preview: string
-  timestamp: Date
-  messages: any[]
-}
-
-interface UserData {
-  firstName?: string | null
-  lastName?: string | null
-  emailAddress?: string
-  imageUrl?: string
-}
-
-interface SidebarProps {
-  conversations: Conversation[]
-  currentConversationId: string | null
-  sidebarOpen: boolean
-  setSidebarOpen: (open: boolean) => void
-  onNewChat?: () => void
-  onSelectConversation?: (conversationId: string) => void
-  onRenameConversation?: (conversationId: string, newTitle: string) => void
-  onDeleteConversation?: (conversationId: string) => void
-  user?: UserData
-}
+import type { SidebarProps, Conversation, User as UserData } from "@/types"
 
 export function Sidebar({ 
   conversations, 
