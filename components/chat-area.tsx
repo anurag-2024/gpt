@@ -14,14 +14,10 @@ export function ChatArea({
   messages, 
   isLoading = false, 
   onEditMessage, 
-  onRegenerateResponse, 
-  onPreviousBranch, 
-  onNextBranch, 
-  currentBranchIndices,
+  onRegenerateResponse,  
   conversationId,
   conversationTitle,
   onDeleteConversation,
-  userName
 }: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -130,19 +126,7 @@ export function ChatArea({
               const isLastAssistantMessage = message.role === 'assistant' && 
                 assistantMessages.length > 0 && 
                 assistantMessages[assistantMessages.length - 1].id === message.id
-              
-              // Calculate branch info for this message
-              // Only show branch navigation if this message has siblings (multiple versions)
-              const branchCount = message.branchCount || 0
-              const branchIndex = message.branchIndex || 0
-              
-              const branchInfo = branchCount > 1 ? {
-                current: branchIndex,
-                total: branchCount,
-                onPrevBranch: message.pairId ? () => onPreviousBranch?.(message.pairId!) : undefined,
-                onNextBranch: message.pairId ? () => onNextBranch?.(message.pairId!, branchCount) : undefined,
-              } : undefined
-              
+            
               return (
                 <MessageBubble 
                   key={message.id} 
@@ -151,7 +135,6 @@ export function ChatArea({
                   onRegenerate={onRegenerateResponse}
                   isLastUserMessage={isLastUserMessage}
                   isLastAssistantMessage={isLastAssistantMessage}
-                  branchInfo={branchInfo}
                 />
               )
             })}

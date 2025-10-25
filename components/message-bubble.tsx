@@ -8,7 +8,7 @@ import { useUser } from "@clerk/nextjs"
 import ReactMarkdown from "react-markdown"
 import type { MessageBubbleProps } from "@/types"
 
-export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage, isLastAssistantMessage, branchInfo }: MessageBubbleProps) {
+export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage, isLastAssistantMessage }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -250,33 +250,6 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
             className={`flex items-center gap-2 text-xs text-muted-foreground ${isUser ? "flex-row-reverse" : "flex-row"}`}
           >
             <span>{formatTime(message.createdAt)}</span>
-            
-            {/* Branch Navigation - Show for messages with multiple versions */}
-            {branchInfo && branchInfo.total > 1 && (
-              <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 p-0"
-                  onClick={branchInfo.onPrevBranch}
-                  disabled={branchInfo.current === 0}
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-medium px-1">
-                  {branchInfo.current + 1} / {branchInfo.total}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 p-0"
-                  onClick={branchInfo.onNextBranch}
-                  disabled={branchInfo.current === branchInfo.total - 1}
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
             
             {/* AI message actions - show on hover */}
             {!isUser && showActions && (

@@ -852,38 +852,6 @@ export default function Home() {
     }
   }
 
-  // Navigate to previous branch of a message
-  const handlePreviousBranch = async (pairId: string) => {
-    if (!currentConversationId) return
-    
-    const currentIndex = currentBranchIndices.get(pairId) || 0
-    if (currentIndex > 0) {
-      // Update branch index
-      const newIndices = new Map(currentBranchIndices)
-      newIndices.set(pairId, currentIndex - 1)
-      setCurrentBranchIndices(newIndices)
-      
-      // Reload conversation to rebuild the message tree with new branch
-      setTimeout(() => handleSelectConversation(currentConversationId), 0)
-    }
-  }
-
-  // Navigate to next branch of a message
-  const handleNextBranch = async (pairId: string, totalBranches: number) => {
-    if (!currentConversationId) return
-    
-    const currentIndex = currentBranchIndices.get(pairId) || 0
-    if (currentIndex < totalBranches - 1) {
-      // Update branch index
-      const newIndices = new Map(currentBranchIndices)
-      newIndices.set(pairId, currentIndex + 1)
-      setCurrentBranchIndices(newIndices)
-      
-      // Reload conversation to rebuild the message tree with new branch
-      setTimeout(() => handleSelectConversation(currentConversationId), 0)
-    }
-  }
-
   return (
     <div className="flex h-screen bg-background text-foreground dark">
       <Sidebar 
@@ -1055,9 +1023,6 @@ export default function Home() {
               isLoading={isLoading || isEditingResponse}
               onEditMessage={handleEditMessage}
               onRegenerateResponse={handleRegenerateResponse}
-              onPreviousBranch={handlePreviousBranch}
-              onNextBranch={handleNextBranch}
-              currentBranchIndices={currentBranchIndices}
               conversationId={currentConversationId}
               conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
               onDeleteConversation={handleDeleteConversation}

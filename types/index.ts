@@ -100,9 +100,6 @@ export interface ChatAreaProps {
   isLoading: boolean
   onEditMessage: (messageId: string, newContent: string) => void
   onRegenerateResponse: (messageId: string) => void
-  onPreviousBranch: (pairId: string) => void
-  onNextBranch: (pairId: string, totalBranches: number) => void
-  currentBranchIndices: Map<string, number>
   conversationId: string | null
   conversationTitle?: string
   onDeleteConversation: (conversationId: string) => void
