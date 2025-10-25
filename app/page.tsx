@@ -38,22 +38,7 @@ export default function Home() {
   const [welcomeMessage, setWelcomeMessage] = useState("")
   const [isTemporaryChat, setIsTemporaryChat] = useState(false)
   const [selectedModel, setSelectedModel] = useState<"chatgpt" | "chatgpt-go">("chatgpt")
-
-  // Models configuration
-  const models = [
-    {
-      id: "chatgpt" as const,
-      name: "ChatGPT",
-      icon: "G",
-      description: "Great for everyday tasks",
-    },
-    {
-      id: "chatgpt-go" as const,
-      name: "ChatGPT Go",
-      icon: "G",
-      description: "Our smartest and fastest model",
-    },
-  ]
+  const [isStreamingContent, setIsStreamingContent] = useState(false)
 
   // Handle model selection
   const handleModelSelect = (modelId: "chatgpt" | "chatgpt-go") => {
@@ -100,7 +85,7 @@ export default function Home() {
         loadConversations()
         // Also reload current conversation to get generatedImages and other DB fields
         if (currentConversationId) {
-          setTimeout(() => handleSelectConversation(currentConversationId), 1000)
+          setTimeout(() => handleSelectConversation(currentConversationId), 500)
         }
       }
     },
@@ -257,6 +242,7 @@ export default function Home() {
         
         // Set loading state to show typing indicator
         setIsEditingResponse(true)
+        setIsStreamingContent(false)
 
         // Call chat API directly
         console.log('📤 Sending request to /api/chat')
@@ -284,7 +270,6 @@ export default function Home() {
         const decoder = new TextDecoder()
         let assistantMessage = ''
         const assistantMsgId = `temp-assistant-${Date.now()}`
-        let hasStartedStreaming = false
 
         if (reader) {
           console.log('📖 Starting to read stream...')
@@ -337,11 +322,11 @@ export default function Home() {
                     
                     console.log('📝 Assistant message length:', assistantMessage.length, 'previousMessages:', previousMessages.length)
                     
-                    // Hide typing indicator once we start receiving content
-                    if (!hasStartedStreaming) {
+                    // Mark that we're streaming content (hide typing indicator)
+                    if (assistantMessage.length > 0 && !isStreamingContent) {
+                      setIsStreamingContent(true)
                       setIsEditingResponse(false)
-                      hasStartedStreaming = true
-                      console.log('🎬 Started streaming, hiding typing indicator')
+                      console.log('🎬 Started streaming content')
                     }
                     
                     // Update UI with streaming response in chunks
@@ -370,6 +355,7 @@ export default function Home() {
         
         // Clear loading state
         setIsEditingResponse(false)
+        setIsStreamingContent(false)
 
         // Reload conversation to get the real message IDs and generatedImages (skip for temporary chats)
         if (conversationIdToUse && !isTemporaryChat) {
@@ -430,6 +416,7 @@ export default function Home() {
     } catch (error) {
       // Clear loading state on error
       setIsEditingResponse(false)
+      setIsStreamingContent(false)
       toast.error("Failed to send message")
       console.error("Send message error:", error)
     }
@@ -654,6 +641,7 @@ export default function Home() {
       
       // Set loading state for typing indicator
       setIsEditingResponse(true)
+      setIsStreamingContent(false)
       
       // Find the message being edited
       const messageIndex = messages.findIndex(m => m.id === messageId)
@@ -711,25 +699,43 @@ export default function Home() {
               try {
                 const jsonStr = line.substring(2).trim()
                 if (jsonStr) {
-                  const parsed = JSON.parse(jsonStr)
-                  if (parsed.content) {
-                    assistantMessage += parsed.content
-                    
-                    // Update UI with streaming response
-                    setMessages([
-                      ...messagesBeforeEdit,
-                      editedUserMessage,
-                      {
-                        id: assistantMsgId,
-                        role: 'assistant' as const,
-                        content: assistantMessage,
-                        createdAt: new Date(),
-                      }
-                    ])
+                  console.log('🔍 [Edit] Parsing:', jsonStr.substring(0, 50))
+                  
+                  // Try parsing as a plain string first (most common format)
+                  if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+                    const textContent = JSON.parse(jsonStr)
+                    assistantMessage += textContent
+                    console.log('📝 [Edit] Added text chunk, total length:', assistantMessage.length)
+                  } else {
+                    // Try parsing as an object with content property
+                    const parsed = JSON.parse(jsonStr)
+                    if (parsed.content) {
+                      assistantMessage += parsed.content
+                      console.log('📝 [Edit] Added content chunk, total length:', assistantMessage.length)
+                    }
+                  }
+                  
+                  // Update UI with streaming response
+                  setMessages([
+                    ...messagesBeforeEdit,
+                    editedUserMessage,
+                    {
+                      id: assistantMsgId,
+                      role: 'assistant' as const,
+                      content: assistantMessage,
+                      createdAt: new Date(),
+                    }
+                  ])
+                  
+                  // Hide typing indicator once first content arrives
+                  if (assistantMessage.length > 0 && !isStreamingContent) {
+                    setIsStreamingContent(true)
+                    setIsEditingResponse(false)
+                    console.log('🎬 [Edit] Started streaming content')
                   }
                 }
               } catch (e) {
-                // Ignore JSON parse errors for incomplete chunks
+                console.error('[Edit] JSON parse error:', e)
               }
             }
           }
@@ -747,6 +753,7 @@ export default function Home() {
     } finally {
       // Always clear loading state
       setIsEditingResponse(false)
+      setIsStreamingContent(false)
     }
   }
 
@@ -759,6 +766,7 @@ export default function Home() {
       
       // Set loading state for typing indicator
       setIsEditingResponse(true)
+      setIsStreamingContent(false)
       
       // Find the AI message and the user message before it
       const messageIndex = messages.findIndex(m => m.id === messageId)
@@ -811,24 +819,42 @@ export default function Home() {
               try {
                 const jsonStr = line.substring(2).trim()
                 if (jsonStr) {
-                  const parsed = JSON.parse(jsonStr)
-                  if (parsed.content) {
-                    assistantMessage += parsed.content
-                    
-                    // Update UI with streaming response
-                    setMessages([
-                      ...messagesBeforeAI,
-                      {
-                        id: assistantMsgId,
-                        role: 'assistant' as const,
-                        content: assistantMessage,
-                        createdAt: new Date(),
-                      }
-                    ])
+                  console.log('🔍 [Regenerate] Parsing:', jsonStr.substring(0, 50))
+                  
+                  // Try parsing as a plain string first (most common format)
+                  if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+                    const textContent = JSON.parse(jsonStr)
+                    assistantMessage += textContent
+                    console.log('📝 [Regenerate] Added text chunk, total length:', assistantMessage.length)
+                  } else {
+                    // Try parsing as an object with content property
+                    const parsed = JSON.parse(jsonStr)
+                    if (parsed.content) {
+                      assistantMessage += parsed.content
+                      console.log('📝 [Regenerate] Added content chunk, total length:', assistantMessage.length)
+                    }
+                  }
+                  
+                  // Update UI with streaming response
+                  setMessages([
+                    ...messagesBeforeAI,
+                    {
+                      id: assistantMsgId,
+                      role: 'assistant' as const,
+                      content: assistantMessage,
+                      createdAt: new Date(),
+                    }
+                  ])
+                  
+                  // Hide typing indicator once first content arrives
+                  if (assistantMessage.length > 0 && !isStreamingContent) {
+                    setIsStreamingContent(true)
+                    setIsEditingResponse(false)
+                    console.log('🎬 [Regenerate] Started streaming content')
                   }
                 }
               } catch (e) {
-                // Ignore JSON parse errors for incomplete chunks
+                console.error('[Regenerate] JSON parse error:', e)
               }
             }
           }
@@ -849,6 +875,7 @@ export default function Home() {
     } finally {
       // Always clear loading state
       setIsEditingResponse(false)
+      setIsStreamingContent(false)
     }
   }
 

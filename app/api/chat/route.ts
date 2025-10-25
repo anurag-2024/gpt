@@ -324,6 +324,7 @@ export async function POST(req: NextRequest) {
     
     try {
       let fullResponseText = '';
+      let hasStartedStreaming = false;
       
       console.log("📋 Final message content type:", typeof trimmedMessages[trimmedMessages.length - 1]?.content)
       console.log("📋 Full last message structure:", JSON.stringify(trimmedMessages[trimmedMessages.length - 1], null, 2).substring(0, 500))
@@ -335,6 +336,12 @@ export async function POST(req: NextRequest) {
         maxTokens: 8192,
         onChunk({ chunk }) {
           console.log("📦 Chunk received:", chunk.type)
+          
+          // Send SSE event on first chunk to immediately hide typing indicator
+          if (!hasStartedStreaming) {
+            hasStartedStreaming = true;
+            console.log("🎬 First chunk received, streaming started")
+          }
         },
         async onFinish({ text, usage, finishReason }) {
           console.log("🎉 OnFinish called!")

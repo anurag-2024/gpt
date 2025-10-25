@@ -138,6 +138,8 @@ export function ChatArea({
                 />
               )
             })}
+            
+            {/* Show typing indicator when loading */}
             {isLoading && (
               <div className="flex gap-4 animate-fade-in">
                 <div className="h-8 w-8 shrink-0 rounded-full bg-muted" />
@@ -146,6 +148,7 @@ export function ChatArea({
                 </div>
               </div>
             )}
+            
             <div ref={messagesEndRef} />
           </div>
         </div>
