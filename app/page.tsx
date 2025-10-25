@@ -133,13 +133,15 @@ export default function Home() {
   // Load conversations on mount and from URL
   useEffect(() => {
     loadConversations()
-    
+
     // Check if there's a conversation ID in the URL
     const conversationIdFromUrl = searchParams.get('c')
+    const preloadMessage = searchParams.get('preloadMessage')
     if (conversationIdFromUrl) {
-      handleSelectConversation(conversationIdFromUrl)
+      // pass preloadMessage (if provided) so the UI can show the user's message immediately
+      handleSelectConversation(conversationIdFromUrl, preloadMessage || undefined)
     }
-    
+
     // Check if temporary-chat parameter is in URL
     const temporaryChatParam = searchParams.get('temporary-chat')
     if (temporaryChatParam === 'true') {
@@ -500,7 +502,7 @@ export default function Home() {
   }
 
   // Load messages for a specific conversation
-  const handleSelectConversation = async (conversationId: string) => {
+  const handleSelectConversation = async (conversationId: string, preloadMessage?: string) => {
     try {
       setCurrentConversationId(conversationId)
       setIsTemporaryChat(false) // Disable temporary chat when selecting a conversation
@@ -635,6 +637,20 @@ export default function Home() {
       setCurrentBranchIndices(newBranchIndices)
       
       setMessages(displayedMessages)
+      // If a preloadMessage was provided, trigger useChat.append so the AI response streams in chunks
+      if (preloadMessage) {
+        try {
+          // Append will POST to /api/chat and stream the assistant response, updating messages via the same setMessages
+          await append({ role: 'user', content: preloadMessage }, {
+            body: {
+              conversationId,
+              isTemporaryChat: false,
+            }
+          })
+        } catch (err) {
+          console.error('Failed to stream assistant response after preload:', err)
+        }
+      }
     } catch (error) {
       toast.error("Failed to load conversation")
       console.error(error)

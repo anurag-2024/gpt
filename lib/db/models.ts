@@ -99,6 +99,53 @@ ConversationSchema.index({ userId: 1, archived: 1, lastMessageAt: -1 });
 export const Message = models.Message || model("Message", MessageSchema);
 export const Conversation = models.Conversation || model("Conversation", ConversationSchema);
 
+/**
+ * Image Schema
+ * Stores AI-generated images (or uploaded images) per user
+ */
+const ImageSchema = new Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    url: {
+      type: String,
+      required: true,
+    },
+    publicId: {
+      type: String,
+    },
+    caption: {
+      type: String,
+      default: "",
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+ImageSchema.index({ userId: 1, createdAt: -1 });
+
+export const Image = models.Image || model("Image", ImageSchema);
+
+export interface IImage {
+  _id: string;
+  userId: string;
+  url: string;
+  publicId?: string;
+  caption?: string;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Types
 export interface IMessage {
   _id: string;

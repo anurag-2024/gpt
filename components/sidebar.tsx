@@ -209,7 +209,10 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             className="h-10 w-10 rounded-lg text-[#ececec] hover:bg-[#2f2f2f]"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              router.push('/library?tab=images')
+            }}
           >
             <BookOpen className="h-5 w-5" />
           </Button>
@@ -396,6 +399,7 @@ export function Sidebar({
           <Button
             variant="ghost"
             className="w-full justify-start gap-2.5 rounded-lg text-[#ececec] hover:bg-[#2f2f2f] h-10 px-2.5 font-normal text-sm"
+            onClick={() => router.push('/library?tab=images')}
           >
             <BookOpen className="h-4 w-4" />
             <span>Library</span>
