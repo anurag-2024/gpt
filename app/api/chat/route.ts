@@ -5,6 +5,7 @@ import { Message, Conversation } from "@/lib/db/models";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { searchMemories, addMemories } from "@/lib/mem0/client";
+import { countTokens, trimMessagesForContext, getModelContextSize } from '@/lib/utils/context'
 import type { ChatRequestBody } from "@/types/backend";
 
 // Mark as Node.js runtime for streaming
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
             conversationId: conversation._id,
             query: userQuery,
             response: `I've generated an image based on your request.`,
-            tokenCount: estimateTokens(userQuery),
+            tokenCount: countTokens(userQuery, selectedModel),
             parentMessageId: parentMessageId || null,
             depth: depth,
             branches: [],
@@ -265,8 +266,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Trim messages for context window - this preserves experimental_attachments
-    let trimmedMessages = trimMessagesForContext(messagesForGemini, 120000);
+  // Trim messages for context window - this preserves experimental_attachments
+  // Use model-specific context size and reserve some tokens for the response
+  const modelMax = getModelContextSize(selectedModel)
+  let trimmedMessages = trimMessagesForContext(messagesForGemini, modelMax, 1024, selectedModel);
     
     // 🧠 Inject memory context into the conversation
     if (contextFromMemory) {
@@ -331,7 +334,7 @@ export async function POST(req: NextRequest) {
               conversationId: conversation!._id,
               query: userQuery,
               response: text,
-              tokenCount: usage?.totalTokens || estimateTokens(userQuery + text),
+              tokenCount: usage?.totalTokens || countTokens(userQuery + text, selectedModel),
               parentMessageId: parentMessageId || null,
               depth: depth,
               branches: [],
@@ -399,44 +402,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Estimate token count (rough approximation)
- * For production, use tiktoken library
- */
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
+// Token estimation and trimming moved to `lib/utils/context.ts` and imported above.
 
-/**
- * Trim messages to fit within context window
- * Keeps system message + most recent messages
- */
-function trimMessagesForContext(messages: any[], maxTokens: number) {
-  const systemMessages = messages.filter((m) => m.role === "system");
-  const otherMessages = messages.filter((m) => m.role !== "system");
-
-  let totalTokens = 0;
-  const trimmed = [];
-
-  // Always include system messages
-  for (const msg of systemMessages) {
-    const tokens = estimateTokens(msg.content);
-    totalTokens += tokens;
-    trimmed.push(msg);
-  }
-
-  // Add messages from newest to oldest until we hit limit
-  for (let i = otherMessages.length - 1; i >= 0; i--) {
-    const msg = otherMessages[i];
-    const tokens = estimateTokens(msg.content);
-
-    if (totalTokens + tokens > maxTokens) {
-      break;
-    }
-
-    totalTokens += tokens;
-    trimmed.unshift(msg);
-  }
-
-  return trimmed;
-}
