@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs"
 import { Sidebar } from "@/components/sidebar"
 import { InputArea } from "@/components/input-area"
 import { toast } from "sonner"
+import { Download, Share2 } from "lucide-react"
 
 interface IImage {
   _id: string
@@ -155,6 +156,58 @@ export default function LibraryPage() {
     }
   }
 
+  const handleDownloadImage = async (imageUrl: string, caption?: string) => {
+    try {
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Format: ChatGPT Image MM-DD-YYYY HH-MM-SS AM/PM.png
+      const now = new Date()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const year = now.getFullYear()
+      const hours = now.getHours()
+      const minutes = String(now.getMinutes()).padStart(2, '0')
+      const seconds = String(now.getSeconds()).padStart(2, '0')
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      const displayHours = hours % 12 || 12
+      
+      link.download = `ChatGPT Image ${month}-${day}-${year} ${displayHours}-${minutes}-${seconds} ${ampm}.png`
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Image downloaded')
+    } catch (err) {
+      console.error('Download failed:', err)
+      toast.error('Failed to download image')
+    }
+  }
+
+  const handleShareImage = async (imageUrl: string, caption?: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: caption || 'AI Generated Image',
+          text: caption || 'Check out this AI generated image',
+          url: imageUrl,
+        })
+        toast.success('Image shared')
+      } else {
+        // Fallback: copy URL to clipboard
+        await navigator.clipboard.writeText(imageUrl)
+        toast.success('Image URL copied to clipboard')
+      }
+    } catch (err) {
+      console.error('Share failed:', err)
+      toast.error('Failed to share image')
+    }
+  }
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       <Sidebar
@@ -199,14 +252,38 @@ export default function LibraryPage() {
             </div>
           ) : (
             <div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1">
                 {images.map((img) => (
-                  <div key={img._id} className="group relative rounded overflow-hidden bg-[#111]">
-                    <img src={img.url} alt={img.caption || 'AI image'} className="w-full h-48 object-cover" />
-                    <div className="absolute left-0 right-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent text-white text-xs">
+                  <div 
+                    key={img._id} 
+                    className="group relative rounded-xs overflow-hidden bg-[#1f1f1f] border border-border hover:border-[#3f3f3f] transition-all cursor-pointer aspect-square"
+                  >
+                    <img 
+                      src={img.url} 
+                      alt={img.caption || 'AI image'} 
+                      className="w-full h-full object-cover" 
+                    />
+                    
+                    {/* Bottom action buttons - always visible on hover */}
+                    <div className="absolute left-0 right-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex items-center justify-between">
-                        <span className="truncate">{img.caption || 'AI generated'}</span>
-                        <span className="ml-2 text-[11px] text-muted-foreground">{new Date(img.createdAt).toLocaleDateString()}</span>
+                        {/* Download button - bottom left */}
+                        <button
+                          onClick={() => handleDownloadImage(img.url, img.caption)}
+                          className="p-2.5 rounded-full cursor-pointer text-white hover:bg-white/10 transition-all hover:scale-110"
+                          title="Download image"
+                        >
+                          <Download className="h-5 w-5" />
+                        </button>
+                        
+                        {/* Share button - bottom right */}
+                        <button
+                          onClick={() => handleShareImage(img.url, img.caption)}
+                          className="p-2.5 rounded-full cursor-pointer text-white hover:bg-white/10 transition-all hover:scale-110"
+                          title="Share image"
+                        >
+                          <Share2 className="h-5 w-5" />
+                        </button>
                       </div>
                     </div>
                   </div>

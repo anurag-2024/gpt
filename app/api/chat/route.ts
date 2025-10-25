@@ -104,6 +104,124 @@ export async function POST(req: NextRequest) {
     console.log("User query:", userQuery.substring(0, 100))
     console.log("User files:", userFiles.length)
     
+    // Calculate depth based on parent message - needed for image generation too
+    let depth = 0;
+    if (parentMessageId) {
+      const parentMsg = await Message.findById(parentMessageId);
+      if (parentMsg) {
+        depth = parentMsg.depth + 1;
+      }
+    }
+    
+    // 🎨 Detect image generation request
+    const imageGenKeywords = [
+      "generate an image",
+      "create an image",
+      "draw an image",
+      "make an image",
+      "generate image",
+      "create image",
+      "draw image",
+      "make image",
+      "show me an image",
+      "generate a picture",
+      "create a picture",
+      "draw a picture",
+      "make a picture",
+      "visualize",
+      "illustrate",
+    ];
+    
+    const isImageGenRequest = imageGenKeywords.some(keyword => 
+      userQuery.toLowerCase().includes(keyword)
+    );
+    
+    // If this is an image generation request, handle it specially
+    if (isImageGenRequest) {
+      console.log("🎨 Detected image generation request");
+      
+      try {
+        // Extract the prompt (remove the trigger phrase)
+        let imagePrompt = userQuery;
+        for (const keyword of imageGenKeywords) {
+          imagePrompt = imagePrompt.replace(new RegExp(keyword, "gi"), "").trim();
+        }
+        
+        // If prompt is empty after removal, use the full query
+        if (!imagePrompt || imagePrompt.length < 5) {
+          imagePrompt = userQuery;
+        }
+        
+        console.log("🎨 Extracted image prompt:", imagePrompt.substring(0, 100));
+        
+        // Call image generation API
+        const imageGenResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-image`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Cookie": req.headers.get("cookie") || "",
+          },
+          body: JSON.stringify({ prompt: imagePrompt }),
+        });
+        
+        if (!imageGenResponse.ok) {
+          throw new Error("Image generation failed");
+        }
+        
+        const imageGenResult = await imageGenResponse.json();
+        console.log("✅ Image generated:", imageGenResult.image.url);
+        
+        // Save the user message and assistant response with image
+        if (!isTemporaryChat && conversation) {
+          const messageData: any = {
+            conversationId: conversation._id,
+            query: userQuery,
+            response: `I've generated an image based on your request.`,
+            tokenCount: estimateTokens(userQuery),
+            parentMessageId: parentMessageId || null,
+            depth: depth,
+            branches: [],
+            generatedImages: [{
+              url: imageGenResult.image.url,
+              publicId: imageGenResult.image.publicId,
+              caption: imageGenResult.image.caption,
+              prompt: imageGenResult.image.originalPrompt,
+            }],
+          };
+          
+          const savedMessage = await Message.create(messageData);
+          console.log("✅ Message with generated image saved:", savedMessage._id);
+          
+          // Update parent message's branches array
+          if (parentMessageId) {
+            await Message.findByIdAndUpdate(parentMessageId, {
+              $addToSet: { branches: savedMessage._id }
+            });
+          }
+          
+          // Update conversation metadata
+          await Conversation.findByIdAndUpdate(conversation._id, {
+            lastMessageAt: new Date(),
+          });
+        }
+        
+        // Return a streaming response with the image info (text only, image will be shown via generatedImages field)
+        return new Response(
+          `0:"I've generated an image based on your request."\nd:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`,
+          {
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "X-Vercel-AI-Data-Stream": "v1",
+            },
+          }
+        );
+        
+      } catch (imageError: any) {
+        console.error("❌ Image generation error:", imageError);
+        // Fall through to normal chat if image generation fails
+      }
+    }
+    
     // 🧠 Retrieve relevant memories from Mem0 (skip if temporary chat)
     let contextFromMemory = "";
     if (!isTemporaryChat) {
@@ -168,17 +286,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calculate depth based on parent message
-    let depth = 0;
+    // Update depth calculation (already done above, just need to update branches)
     if (parentMessageId) {
-      const parentMsg = await Message.findById(parentMessageId);
-      if (parentMsg) {
-        depth = parentMsg.depth + 1;
-        // Add this message ID to parent's branches array
-        await Message.findByIdAndUpdate(parentMessageId, {
-          $addToSet: { branches: null } // Will be updated later with new message ID
-        });
-      }
+      // Add this message ID to parent's branches array
+      await Message.findByIdAndUpdate(parentMessageId, {
+        $addToSet: { branches: null } // Will be updated later with new message ID
+      });
     }
 
     // Trim messages for context window - this preserves experimental_attachments

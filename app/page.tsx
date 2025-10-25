@@ -116,6 +116,10 @@ export default function Home() {
       // Reload conversations after message is complete (skip if temporary)
       if (!isTemporaryChat) {
         loadConversations()
+        // Also reload current conversation to get generatedImages and other DB fields
+        if (currentConversationId) {
+          setTimeout(() => handleSelectConversation(currentConversationId), 1000)
+        }
       }
     },
   })
@@ -385,9 +389,9 @@ export default function Home() {
         // Clear loading state
         setIsEditingResponse(false)
 
-        // Reload conversation to get the real message IDs (skip for temporary chats)
+        // Reload conversation to get the real message IDs and generatedImages (skip for temporary chats)
         if (conversationIdToUse && !isTemporaryChat) {
-          setTimeout(() => handleSelectConversation(conversationIdToUse), 500)
+          setTimeout(() => handleSelectConversation(conversationIdToUse), 1000)
         }
       } else {
         // Existing conversation - use append as before
@@ -585,6 +589,7 @@ export default function Home() {
               branches: pair.branches,
               branchCount: siblingsCount,
               branchIndex: currentIndex,
+              generatedImages: pair.assistant.generatedImages || [],
             })
             
             // Continue building path from this message
@@ -617,6 +622,7 @@ export default function Home() {
               branches: selectedPair.branches,
               branchCount: siblingsCount,
               branchIndex: branchIndex,
+              generatedImages: selectedPair.assistant.generatedImages || [],
             })
             
             // Continue building path

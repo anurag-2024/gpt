@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
         parentMessageId: pair.parentMessageId,
         branches: pair.branches || [],
         depth: pair.depth || 0,
+        generatedImages: pair.generatedImages || [], // Include generated images
       });
     });
 

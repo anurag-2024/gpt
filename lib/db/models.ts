@@ -28,6 +28,16 @@ const MessageSchema = new Schema(
       type: Schema.Types.Mixed,
       default: [],
     },
+    // Generated images (from DALL-E or similar)
+    generatedImages: {
+      type: [{
+        url: String,
+        publicId: String,
+        caption: String,
+        prompt: String,
+      }],
+      default: [],
+    },
     tokenCount: {
       type: Number,
       default: 0,
@@ -157,6 +167,12 @@ export interface IMessage {
     type: string;
     name: string;
     size: number;
+  }[];
+  generatedImages?: {
+    url: string;
+    publicId?: string;
+    caption?: string;
+    prompt?: string;
   }[];
   tokenCount?: number;
   parentMessageId?: string | null;

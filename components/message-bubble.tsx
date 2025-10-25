@@ -15,8 +15,18 @@ interface FileAttachment {
   size?: number
 }
 
+interface GeneratedImage {
+  url: string
+  publicId?: string
+  caption?: string
+  prompt?: string
+}
+
 interface MessageBubbleProps {
-  message: UIMessage & { files?: FileAttachment[] }
+  message: UIMessage & { 
+    files?: FileAttachment[]
+    generatedImages?: GeneratedImage[]
+  }
   onEdit?: (messageId: string, newContent: string) => void
   onRegenerate?: (messageId: string) => void
   isLastUserMessage?: boolean
@@ -34,6 +44,7 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(message.content)
+  const [imageLoaded, setImageLoaded] = useState<Record<number, boolean>>({})
   const { user } = useUser()
 
   const handleCopy = () => {
@@ -185,6 +196,41 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
                             <p className="truncate text-xs font-medium">{file.name}</p>
                             <p className="text-xs opacity-70">{file.type.split('/')[1]?.toUpperCase()}</p>
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Display generated images (for assistant messages) */}
+              {!isUser && message.generatedImages && message.generatedImages.length > 0 && (
+                <div className="mb-3 flex flex-col gap-2">
+                  {message.generatedImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      {/* Skeleton loader while image is loading */}
+                      {!imageLoaded[index] && (
+                        <div 
+                          className="rounded-2xl border border-border shadow-lg bg-gradient-to-br from-[#2f2f2f] via-[#3a3a3a] to-[#2f2f2f] animate-pulse"
+                          style={{ width: '500px', height: '500px' }}
+                        >
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-muted-foreground text-sm">Generating image...</div>
+                          </div>
+                        </div>
+                      )}
+                      <img
+                        src={image.url}
+                        alt={image.caption || 'Generated image'}
+                        className={`rounded-2xl border border-border shadow-lg object-cover transition-opacity duration-300 ${
+                          imageLoaded[index] ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'
+                        }`}
+                        style={{ width: '500px', height: '500px' }}
+                        onLoad={() => setImageLoaded(prev => ({ ...prev, [index]: true }))}
+                      />
+                      {imageLoaded[index] && (image.caption || image.prompt) && (
+                        <div className="mt-2 text-xs text-muted-foreground italic max-w-[500px]">
+                          AI Generated Image
                         </div>
                       )}
                     </div>
