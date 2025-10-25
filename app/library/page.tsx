@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { Sidebar } from "@/components/sidebar"
@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { Download, Share2 } from "lucide-react"
 import type { IImage } from "@/types"
 
-export default function LibraryPage() {
+function LibraryContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useUser()
@@ -290,5 +290,17 @@ export default function LibraryPage() {
         <InputArea onSendMessage={handleSendMessage} />
       </div>
     </div>
+  )
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen bg-background text-foreground items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <LibraryContent />
+    </Suspense>
   )
 }
