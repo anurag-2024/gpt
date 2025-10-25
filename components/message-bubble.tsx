@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Copy, Edit2, RotateCcw, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { useUser } from "@clerk/nextjs"
+import { useAppSelector } from "@/lib/redux/hooks"
 import ReactMarkdown from "react-markdown"
 import type { MessageBubbleProps } from "@/types"
 
@@ -14,7 +14,7 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(message.content)
   const [imageLoaded, setImageLoaded] = useState<Record<number, boolean>>({})
-  const { user } = useUser()
+  const user = useAppSelector((state) => state.user)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
@@ -91,8 +91,8 @@ export function MessageBubble({ message, onEdit, onRegenerate, isLastUserMessage
       {/* Avatar - Only show for user messages */}
       {isUser && (
         <Avatar className="h-8 w-8 shrink-0">
-          <AvatarImage src={user?.imageUrl} />
-          <AvatarFallback>{user?.firstName?.[0] || user?.username?.[0] || 'U'}</AvatarFallback>
+          <AvatarImage src={user?.imageUrl || undefined} />
+          <AvatarFallback>{user?.firstName?.[0] || 'U'}</AvatarFallback>
         </Avatar>
       )}
 

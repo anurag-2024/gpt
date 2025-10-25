@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from "react"
 import { useChat, type Message } from "ai/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useUser } from "@clerk/nextjs"
 import { Sidebar } from "@/components/sidebar"
 import { ChatArea } from "@/components/chat-area"
 import { InputArea } from "@/components/input-area"
@@ -24,15 +23,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChatGPTModelSelector } from "@/components/chatgpt-model-selector"
 import type { Conversation, ExtendedMessage } from "@/types"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { fetchConversations, renameConversation, deleteConversation, addConversation, toConversationWithDate } from "@/lib/redux/slices/conversationsSlice"
 
 function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user } = useUser()
+  const dispatch = useAppDispatch()
+  
+  // Get user and conversations from Redux store
+  const user = useAppSelector((state) => state.user)
+  const { conversations: serializedConversations, isLoading: isLoadingConversations } = useAppSelector((state) => state.conversations)
+  
+  // Convert serialized conversations to Conversation with Date objects
+  const conversations = serializedConversations.map(toConversationWithDate)
+  
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
   const [currentBranchIndices, setCurrentBranchIndices] = useState<Map<string, number>>(new Map())
   const [isEditingResponse, setIsEditingResponse] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState("")
@@ -82,7 +89,7 @@ function HomeContent() {
       console.log("✅ Chat finished:", message)
       // Reload conversations after message is complete (skip if temporary)
       if (!isTemporaryChat) {
-        loadConversations()
+        dispatch(fetchConversations())
         // Also reload current conversation to get generatedImages and other DB fields
         if (currentConversationId) {
           setTimeout(() => handleSelectConversation(currentConversationId), 500)
@@ -94,18 +101,16 @@ function HomeContent() {
   // Select a random welcome message when there are no messages
   useEffect(() => {
     if (messages.length === 0) {
-      const userName = user?.firstName || user?.username
+      const userName = user?.firstName || undefined
       const welcomeMessages = getWelcomeMessages(userName)
       const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
       setWelcomeMessage(welcomeMessages[randomIndex])
     }
-  }, [messages.length, user?.firstName, user?.username])
+  }, [messages.length, user?.firstName])
 
-  // Load conversations on mount and from URL
+  // Load conversations on mount (removed - now using Redux effect above)
+  // Check if there's a conversation ID in the URL
   useEffect(() => {
-    loadConversations()
-
-    // Check if there's a conversation ID in the URL
     const conversationIdFromUrl = searchParams.get('c')
     const preloadMessage = searchParams.get('preloadMessage')
     if (conversationIdFromUrl) {
@@ -150,26 +155,10 @@ function HomeContent() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const loadConversations = async () => {
-    try {
-      const response = await fetch("/api/conversations")
-      if (!response.ok) throw new Error("Failed to load conversations")
-      
-      const data = await response.json()
-      setConversations(data.conversations.map((conv: any) => ({
-        id: conv._id,
-        title: conv.title,
-        preview: "Click to view conversation",
-        timestamp: new Date(conv.lastMessageAt),
-        messages: [],
-      })))
-    } catch (error) {
-      toast.error("Failed to load conversations")
-      console.error(error)
-    } finally {
-      setIsLoadingConversations(false)
-    }
-  }
+  // Load conversations from Redux on mount
+  useEffect(() => {
+    dispatch(fetchConversations())
+  }, [dispatch])
 
   const handleSendMessage = async (content: string, files?: any[]) => {
     if (!content.trim() && (!files || files.length === 0)) return
@@ -195,7 +184,7 @@ function HomeContent() {
         conversationIdToUse = data.conversation._id
         console.log("Conversation created:", conversationIdToUse)
         setCurrentConversationId(conversationIdToUse)
-        await loadConversations()
+        dispatch(fetchConversations())
       }
 
       // Prepare message with files if any
@@ -434,15 +423,7 @@ function HomeContent() {
   // Rename a conversation
   const handleRenameConversation = async (conversationId: string, newTitle: string) => {
     try {
-      const response = await fetch('/api/conversations', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, title: newTitle }),
-      })
-
-      if (!response.ok) throw new Error('Failed to rename conversation')
-
-      await loadConversations()
+      await dispatch(renameConversation({ conversationId, newTitle })).unwrap()
       toast.success('Conversation renamed')
     } catch (error) {
       toast.error('Failed to rename conversation')
@@ -453,12 +434,6 @@ function HomeContent() {
   // Delete a conversation
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      const response = await fetch(`/api/conversations?id=${conversationId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) throw new Error('Failed to delete conversation')
-
       // If deleting current conversation, clear it
       if (currentConversationId === conversationId) {
         setCurrentConversationId(null)
@@ -466,7 +441,7 @@ function HomeContent() {
         router.push('/')
       }
 
-      await loadConversations()
+      await dispatch(deleteConversation(conversationId)).unwrap()
       toast.success('Conversation deleted')
     } catch (error) {
       toast.error('Failed to delete conversation')
@@ -897,10 +872,10 @@ function HomeContent() {
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
         user={{
-          firstName: user?.firstName,
-          lastName: user?.lastName,
-          emailAddress: user?.primaryEmailAddress?.emailAddress,
-          imageUrl: user?.imageUrl
+          firstName: user?.firstName || undefined,
+          lastName: user?.lastName || undefined,
+          emailAddress: user?.email || undefined,
+          imageUrl: user?.imageUrl || undefined
         }}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -1170,7 +1145,7 @@ function HomeContent() {
               conversationId={currentConversationId}
               conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
               onDeleteConversation={handleDeleteConversation}
-              userName={user?.firstName || user?.username || undefined}
+              userName={user?.firstName || undefined}
             />
             <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
           </>

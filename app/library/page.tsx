@@ -2,21 +2,28 @@
 
 import React, { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useUser } from "@clerk/nextjs"
 import { Sidebar } from "@/components/sidebar"
 import { InputArea } from "@/components/input-area"
 import { toast } from "sonner"
 import { Download, Share2 } from "lucide-react"
 import type { IImage } from "@/types"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { fetchConversations, renameConversation, deleteConversation, toConversationWithDate } from "@/lib/redux/slices/conversationsSlice"
 
 function LibraryContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user } = useUser()
+  const dispatch = useAppDispatch()
+  
+  // Get user and conversations from Redux store
+  const user = useAppSelector((state) => state.user)
+  const { conversations: serializedConversations, isLoading: isLoadingConversations } = useAppSelector((state) => state.conversations)
+  
+  // Convert serialized conversations to Conversation with Date objects
+  const conversations = serializedConversations.map(toConversationWithDate)
+  
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [images, setImages] = useState<IImage[] | null>(null)
-  const [conversations, setConversations] = useState<any[]>([])
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -49,34 +56,10 @@ function LibraryContent() {
     load()
   }, [searchParams])
 
-  // Load conversations for sidebar
+  // Load conversations from Redux on mount
   useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        setIsLoadingConversations(true)
-        const res = await fetch('/api/conversations')
-        if (!res.ok) {
-          setConversations([])
-          return
-        }
-        const data = await res.json()
-        setConversations(data.conversations.map((conv: any) => ({
-          id: conv._id,
-          title: conv.title,
-          preview: 'Click to view conversation',
-          timestamp: new Date(conv.lastMessageAt),
-          messages: [],
-        })))
-      } catch (err) {
-        console.error('Failed to load conversations', err)
-        setConversations([])
-      } finally {
-        setIsLoadingConversations(false)
-      }
-    }
-
-    loadConversations()
-  }, [])
+    dispatch(fetchConversations())
+  }, [dispatch])
 
   const handleSelectConversation = (conversationId: string) => {
     // Navigate to the main chat page with the conversation id in query string
@@ -89,15 +72,7 @@ function LibraryContent() {
 
   const handleRenameConversation = async (conversationId: string, newTitle: string) => {
     try {
-      const res = await fetch('/api/conversations', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, title: newTitle }),
-      })
-      if (!res.ok) throw new Error('Failed to rename')
-      // refresh locally
-      const updated = conversations.map((c) => c.id === conversationId ? { ...c, title: newTitle } : c)
-      setConversations(updated)
+      await dispatch(renameConversation({ conversationId, newTitle })).unwrap()
       toast.success('Conversation renamed')
     } catch (err: any) {
       console.error(err)
@@ -107,9 +82,7 @@ function LibraryContent() {
 
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      const res = await fetch(`/api/conversations?id=${conversationId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete')
-      setConversations((prev) => prev.filter((c) => c.id !== conversationId))
+      await dispatch(deleteConversation(conversationId)).unwrap()
       toast.success('Conversation deleted')
     } catch (err: any) {
       console.error(err)
@@ -211,10 +184,10 @@ function LibraryContent() {
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
         user={{
-          firstName: user?.firstName,
-          lastName: user?.lastName,
-          emailAddress: user?.primaryEmailAddress?.emailAddress,
-          imageUrl: user?.imageUrl,
+          firstName: user?.firstName || undefined,
+          lastName: user?.lastName || undefined,
+          emailAddress: user?.email || undefined,
+          imageUrl: user?.imageUrl || undefined,
         }}
       />
 
