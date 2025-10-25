@@ -80,7 +80,6 @@ Project Structure (high-level)
 Notes and tips
 - Redux state keeps conversations serializable (timestamps stored as ISO strings). Use `toConversationWithDate` to convert when needed.
 - `components/image-actions.tsx` centralizes download/share overlay behavior. The overlay is hover-only on desktop and always-visible on mobile.
-- One-off message handoff from the Library to the Chat page uses `sessionStorage` with keys like `preload:<conversationId>` to avoid duplicate DB writes.
 - Server endpoints live under `app/api/*` (e.g., `/api/chat`, `/api/conversations`, `/api/images`). Consider adding server-side dedup checks if duplicate messages appear.
 
 Contributing
