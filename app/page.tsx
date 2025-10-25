@@ -88,10 +88,10 @@ function HomeContent() {
     onFinish: (message) => {
       if (!isTemporaryChat) {
         dispatch(fetchConversations())
-        // Also reload current conversation to get generatedImages and other DB fields
-        if (currentConversationId) {
-          setTimeout(() => handleSelectConversation(currentConversationId), 500)
-        }
+        // // Also reload current conversation to get generatedImages and other DB fields
+        // if (currentConversationId) {
+        //   setTimeout(() => handleSelectConversation(currentConversationId), 500)
+        // }
       }
     },
   })
