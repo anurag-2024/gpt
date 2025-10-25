@@ -88,15 +88,15 @@ export function SearchModal({ open, onOpenChange, conversations, onSelectConvers
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - only on desktop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="hidden md:block fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
         onClick={() => onOpenChange(false)}
       />
 
-      {/* Modal */}
-      <div className="fixed left-1/2 top-[10%] -translate-x-1/2 z-50 w-full max-w-2xl">
-        <div className="bg-[#2f2f2f] rounded-2xl shadow-2xl border border-[#4d4d4d] overflow-hidden">
+      {/* Modal - Full screen on mobile, centered on desktop */}
+      <div className="fixed inset-0 md:left-1/2 md:top-[10%] md:-translate-x-1/2 md:inset-auto z-50 w-full md:max-w-2xl md:h-auto">
+        <div className="h-full md:h-auto bg-[#2f2f2f] md:rounded-2xl shadow-2xl border-0 md:border md:border-[#4d4d4d] overflow-hidden flex flex-col">
           {/* Search Input */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-[#4d4d4d]">
             <Search className="h-5 w-5 text-[#8e8ea0]" />
@@ -135,8 +135,8 @@ export function SearchModal({ open, onOpenChange, conversations, onSelectConvers
             </button>
           </div>
 
-          {/* Results */}
-          <div className="max-h-[500px] overflow-y-auto">
+          {/* Results - Scrollable area that takes remaining space */}
+          <div className="flex-1 overflow-y-auto md:max-h-[500px]">
             {Object.entries(groupedConversations).map(([group, convs]) => {
               if (convs.length === 0) return null
 

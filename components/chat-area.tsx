@@ -64,9 +64,9 @@ export function ChatArea({
 
   return (
     <div className="flex-1 overflow-y-auto bg-background flex flex-col">
-      {/* Top Bar with Share and Menu - Only show when there's a conversation */}
+      {/* Top Bar with Share and Menu - Only show when there's a conversation and on desktop */}
       {conversationId && messages.length > 0 && (
-        <div className="sticky top-0 z-10 bg-background backdrop-blur-sm border-b border-border/20">
+        <div className="sticky top-0 z-10 bg-background backdrop-blur-sm border-b border-border/20 hidden md:block">
           <div className="w-full px-4 py-2 flex items-center justify-end">
             <div className="flex items-center gap-1">
               <Button

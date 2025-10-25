@@ -33,11 +33,22 @@ export function Sidebar({
   const [collapsedHovered, setCollapsedHovered] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
 
   // Prevent hydration mismatch by only rendering user-specific content after mount
   useEffect(() => {
     setIsMounted(true)
+    
+    // Check if mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   // Keyboard shortcut for search (Ctrl+K)
@@ -99,16 +110,17 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile menu button */}
+    {/* Only show hamburger button when no chat is open */}
+    {!currentConversationId && (
       <Button
         variant="ghost"
         size="icon"
         className="fixed left-4 top-4 z-50 md:hidden"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {sidebarOpen ? <> </> : <Menu className="h-5 w-5" />}
       </Button>
-
+    )}
       {/* Sidebar overlay for mobile */}
       {sidebarOpen && (
         <div
@@ -417,6 +429,10 @@ export function Sidebar({
                 onClick={() => {
                   if (editingId !== conv.id) {
                     onSelectConversation?.(conv.id)
+                    // Close sidebar on mobile after selecting chat
+                    if (isMobile) {
+                      setSidebarOpen(false)
+                    }
                   }
                 }}
               >
@@ -443,14 +459,15 @@ export function Sidebar({
                     <div className="flex items-center gap-2">
                       <p className="flex-1 truncate text-sm font-normal text-[#ececec] pr-6">{conv.title}</p>
                     </div>
-                    {hoveredId === conv.id && (
+                    {/* Always show three dots on mobile, on hover for desktop */}
+                    {(hoveredId === conv.id || isMobile) && (
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 z-50">
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-[#8e8ea0] hover:text-[#ececec] hover:bg-[#212121] rounded-md"
+                              className="h-7 w-7 text-[#8e8ea0] hover:text-[#ececec] hover:bg-[#212121] rounded-md md:opacity-100"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MoreHorizontal className="h-4 w-4" />

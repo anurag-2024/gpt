@@ -634,7 +634,8 @@ export default function Home() {
 
   // Handle message editing - when user edits their message, regenerate response
   const handleEditMessage = async (messageId: string, newContent: string) => {
-    if (!currentConversationId) return
+    // Allow editing in both regular chats and temporary chats
+    if (!currentConversationId && !isTemporaryChat) return
     
     try {
       console.log("Editing message:", messageId, "New content:", newContent)
@@ -742,10 +743,12 @@ export default function Home() {
         }
       }
 
-      toast.success("Message edited and response regenerated")
+      // toast.success("Message edited and response regenerated")
       
-      // Reload conversation to show the new branch
-      await handleSelectConversation(currentConversationId)
+      // Reload conversation to show the new branch (only for non-temporary chats)
+      if (currentConversationId) {
+        await handleSelectConversation(currentConversationId)
+      }
       
     } catch (error: any) {
       console.error("Edit message error:", error)
@@ -759,7 +762,8 @@ export default function Home() {
 
   // Handle regenerating the last AI response
   const handleRegenerateResponse = async (messageId: string) => {
-    if (!currentConversationId) return
+    // Allow regenerating in both regular chats and temporary chats
+    if (!currentConversationId && !isTemporaryChat) return
     
     try {
       console.log("Regenerating response for message:", messageId)
@@ -861,13 +865,15 @@ export default function Home() {
         }
       }
 
-      toast.success("Response regenerated")
+      // toast.success("Response regenerated")
       
       // Wait a moment before reloading to show the complete message
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      // Reload the conversation to get branch information
-      await handleSelectConversation(currentConversationId)
+      // Reload the conversation to get branch information (only for non-temporary chats)
+      if (currentConversationId) {
+        await handleSelectConversation(currentConversationId)
+      }
       
     } catch (error: any) {
       console.error("Regenerate error:", error)
@@ -901,29 +907,33 @@ export default function Home() {
         {messages.length === 0 ? (
           /* Empty state - centered welcome with input */
           <>
-            {/* Top Navigation Bar - Only shown when no messages */}
+            {/* Top Navigation Bar - Hide model selector on mobile, show upgrade and temp chat buttons */}
             <div className="flex items-center justify-between px-4 py-3">
-              {/* Left - ChatGPT Dropdown */}
-              <ChatGPTModelSelector 
-                selectedModel={selectedModel}
-                onModelSelect={handleModelSelect}
-              />
+              {/* Left - ChatGPT Dropdown (hidden on mobile) */}
+              <div className="hidden md:block">
+                <ChatGPTModelSelector 
+                  selectedModel={selectedModel}
+                  onModelSelect={handleModelSelect}
+                />
+              </div>
+              <div className="md:hidden w-8" /> {/* Spacer on mobile */}
 
               {/* Center - Upgrade to Go Button */}
               <Button
-                className="bg-gradient-to-r from-[#6e56cf] to-[#8e4ec6] hover:from-[#5d47b8] hover:to-[#7d3fb5] text-white rounded-full px-4 py-2 h-9 text-sm font-medium flex items-center gap-2 shadow-sm"
+                className="bg-gradient-to-r from-[#6e56cf] to-[#8e4ec6] hover:from-[#5d47b8] hover:to-[#7d3fb5] text-white rounded-full px-3 md:px-4 py-2 h-9 text-xs md:text-sm font-medium flex items-center gap-2 shadow-sm"
                 onClick={() => {
                   router.push('/pricing')
                 }}
               >
                 <Sparkles className="h-4 w-4" />
-                Upgrade to Go
+                <span className="hidden sm:inline">Upgrade to Go</span>
+                <span className="sm:hidden">Upgrade to Go</span>
               </Button>
 
               {/* Right - Temporary Chat Button */}
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 px-3 py-2 h-9 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] rounded-lg"
+                className="flex items-center gap-2 px-2 md:px-3 py-2 h-9 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] rounded-lg"
                 onClick={() => {
                   setIsTemporaryChat(!isTemporaryChat)
                 }}
@@ -937,9 +947,12 @@ export default function Home() {
               </Button>
             </div>
 
-            <div className="flex-1 flex mt-[13%] justify-center">
-              <div className="w-full max-w-3xl px-4">
-                <div className="text-center mb-8">
+            {/* Welcome text and input positioning */}
+            {/* Mobile: Always input at bottom, Desktop: Input centered below welcome text */}
+            <div className="flex-1 flex flex-col md:items-center md:justify-center">
+              {/* Desktop: Centered welcome text with input below it */}
+              <div className="hidden md:flex flex-col items-center justify-center flex-1 px-4 w-[70%] mx-auto">
+                <div className="text-center w-full mb-8">
                   {isTemporaryChat ? (
                     <>
                       <h1 className="text-[32px] font-medium text-foreground mb-4 tracking-tight">
@@ -955,25 +968,68 @@ export default function Home() {
                     </h1>
                   )}
                 </div>
-                <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
+                {/* Input below welcome text on desktop */}
+                <div className="w-full">
+                  <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
+                </div>
+              </div>
+
+              {/* Mobile: Welcome text centered, input at bottom */}
+              <div className="flex flex-col flex-1 md:hidden">
+                <div className="flex-1 flex items-center justify-center px-4">
+                  <div className="text-center w-full max-w-3xl">
+                    {isTemporaryChat ? (
+                      <>
+                        <h1 className="text-[28px] font-medium text-foreground mb-4 tracking-tight">
+                          Temporary Chat
+                        </h1>
+                        <p className="text-[#8e8ea0] text-sm max-w-sm mx-auto leading-relaxed">
+                          This chat won't appear in history, use or update ChatGPT's memory, or be used to train our models. For safety purposes, we may keep a copy of this chat for up to 30 days.
+                        </p>
+                      </>
+                    ) : (
+                      <h1 className="text-[28px] font-medium text-foreground mb-0 tracking-tight">
+                        {welcomeMessage || "Ready when you are."}
+                      </h1>
+                    )}
+                  </div>
+                </div>
+                {/* Input area at bottom on mobile */}
+                <div className="w-full">
+                  <InputArea onSendMessage={handleSendMessage} isStreaming={isLoading || isEditingResponse} onStop={stop} />
+                </div>
               </div>
             </div>
           </>
         ) : (
           /* Chat mode - input at bottom */
           <>
-            {/* Top bar for temporary chat mode */}
-            {isTemporaryChat && (
+            {/* Top bar - Show different layouts for temporary vs regular chat */}
+            {isTemporaryChat ? (
+              /* Temporary Chat Mode Top Bar */
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#2f2f2f]">
-                {/* Left - ChatGPT button (same as new chat page) */}
-                <ChatGPTModelSelector 
-                  selectedModel={selectedModel}
-                  onModelSelect={handleModelSelect}
-                />
+                {/* Left side - Hamburger menu (mobile) + ChatGPT button */}
+                <div className="flex items-center gap-2">
+                  {/* Hamburger menu - only visible on mobile */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f] md:hidden"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                      <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </Button>
+                  
+                  <ChatGPTModelSelector 
+                    selectedModel={selectedModel}
+                    onModelSelect={handleModelSelect}
+                  />
+                </div>
        
-                
-                {/* Middle - Temporary Chat indicator */}
-                <div className="flex items-center gap-2 text-[#8e8ea0] absolute left-1/2 transform -translate-x-1/2">
+                {/* Middle - Temporary Chat indicator (hidden on mobile to prevent overlap) */}
+                <div className="hidden md:flex items-center gap-2 text-[#8e8ea0] absolute left-1/2 transform -translate-x-1/2">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" data-rtl-flip="" className="icon"><path d="M4.52148 15.1664C4.61337 14.8108 4.39951 14.4478 4.04395 14.3559C3.73281 14.2756 3.41605 14.4295 3.28027 14.7074L3.2334 14.8334C3.13026 15.2324 3.0046 15.6297 2.86133 16.0287L2.71289 16.4281C2.63179 16.6393 2.66312 16.8775 2.79688 17.06C2.93067 17.2424 3.14825 17.3443 3.37402 17.3305L3.7793 17.3002C4.62726 17.2265 5.44049 17.0856 6.23438 16.8764C6.84665 17.1788 7.50422 17.4101 8.19434 17.558C8.55329 17.6348 8.9064 17.4062 8.9834 17.0473C9.06036 16.6882 8.83177 16.3342 8.47266 16.2572C7.81451 16.1162 7.19288 15.8862 6.62305 15.5815C6.50913 15.5206 6.38084 15.4946 6.25391 15.5053L6.12793 15.5277C5.53715 15.6955 4.93256 15.819 4.30566 15.9027C4.33677 15.8053 4.36932 15.7081 4.39844 15.6098L4.52148 15.1664Z"></path><path d="M15.7998 14.5365C15.5786 14.3039 15.2291 14.2666 14.9668 14.4301L14.8604 14.5131C13.9651 15.3633 12.8166 15.9809 11.5273 16.2572C11.1682 16.3342 10.9396 16.6882 11.0166 17.0473C11.0936 17.4062 11.4467 17.6348 11.8057 17.558C13.2388 17.2509 14.5314 16.5858 15.5713 15.6645L15.7754 15.477C16.0417 15.2241 16.0527 14.8028 15.7998 14.5365Z"></path><path d="M2.23828 7.58927C1.97668 8.34847 1.83496 9.15958 1.83496 10.0004C1.835 10.736 1.94324 11.4483 2.14551 12.1234L2.23828 12.4106C2.35793 12.7576 2.73588 12.9421 3.08301 12.8227C3.3867 12.718 3.56625 12.4154 3.52637 12.1088L3.49512 11.977C3.2808 11.3549 3.16508 10.6908 3.16504 10.0004C3.16504 9.30977 3.28072 8.64514 3.49512 8.02286C3.61476 7.67563 3.43024 7.2968 3.08301 7.17716C2.73596 7.05778 2.35799 7.24232 2.23828 7.58927Z"></path><path d="M16.917 12.8227C17.2641 12.9421 17.6421 12.7576 17.7617 12.4106C18.0233 11.6515 18.165 10.8411 18.165 10.0004C18.165 9.15958 18.0233 8.34847 17.7617 7.58927C17.642 7.24231 17.264 7.05778 16.917 7.17716C16.5698 7.2968 16.3852 7.67563 16.5049 8.02286C16.7193 8.64514 16.835 9.30977 16.835 10.0004C16.8349 10.6908 16.7192 11.3549 16.5049 11.977C16.3852 12.3242 16.5698 12.703 16.917 12.8227Z"></path><path d="M8.9834 2.95255C8.90632 2.59374 8.55322 2.3651 8.19434 2.44181C6.76126 2.74892 5.46855 3.41405 4.42871 4.33536L4.22461 4.52286C3.95829 4.77577 3.94729 5.19697 4.2002 5.46329C4.42146 5.69604 4.77088 5.73328 5.0332 5.56973L5.13965 5.4877C6.03496 4.63748 7.18337 4.0189 8.47266 3.74259C8.83177 3.66563 9.06036 3.31166 8.9834 2.95255Z"></path><path d="M15.5713 4.33536C14.5314 3.41405 13.2387 2.74892 11.8057 2.44181C11.4468 2.3651 11.0937 2.59374 11.0166 2.95255C10.9396 3.31166 11.1682 3.66563 11.5273 3.74259C12.7361 4.00163 13.8209 4.56095 14.6895 5.33048L14.8604 5.4877L14.9668 5.56973C15.2291 5.73327 15.5785 5.69604 15.7998 5.46329C16.0211 5.23025 16.0403 4.87902 15.8633 4.6254L15.7754 4.52286L15.5713 4.33536Z"></path></svg>
                   <span className="text-sm text-[#8e8ea0]">Temporary Chat</span>
                   <TooltipProvider>
@@ -996,8 +1052,27 @@ export default function Home() {
                   </TooltipProvider>
                 </div>
                 
-                {/* Right - Three horizontal dots menu */}
-                <DropdownMenu>
+                {/* Right - Three horizontal dots menu + new chat button (mobile) */}
+                <div className="flex items-center gap-2">
+                  {/* New chat button - only visible on mobile */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f] md:hidden"
+                    onClick={() => {
+                      setMessages([])
+                      setIsTemporaryChat(false)
+                      setCurrentConversationId(null)
+                      router.push('/')
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                      <path d="M21.75 12C21.75 12.1989 21.671 12.3897 21.5303 12.5303C21.3897 12.671 21.1989 12.75 21 12.75H12.75V21C12.75 21.1989 12.671 21.3897 12.5303 21.5303C12.3897 21.671 12.1989 21.75 12 21.75C11.8011 21.75 11.6103 21.671 11.4697 21.5303C11.329 21.3897 11.25 21.1989 11.25 21V12.75H3C2.80109 12.75 2.61032 12.671 2.46967 12.5303C2.32902 12.3897 2.25 12.1989 2.25 12C2.25 11.8011 2.32902 11.6103 2.46967 11.4697C2.61032 11.329 2.80109 11.25 3 11.25H11.25V3C11.25 2.80109 11.329 2.61032 11.4697 2.46967C11.6103 2.32902 11.8011 2.25 12 2.25C12.1989 2.25 12.3897 2.32902 12.5303 2.46967C12.671 2.61032 12.75 2.80109 12.75 3V11.25H21C21.1989 11.25 21.3897 11.329 21.5303 11.4697C21.671 11.6103 21.75 11.8011 21.75 12Z" fill="currentColor"/>
+                    </svg>
+                  </Button>
+                  
+                  {/* Three dots menu */}
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -1043,8 +1118,50 @@ export default function Home() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
+              </div>
+            ) : (
+              /* Regular Chat Mode Top Bar */
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#2f2f2f]">
+                {/* Left side - Hamburger menu (mobile) + ChatGPT button */}
+                <div className="flex items-center gap-2">
+                  {/* Hamburger menu - only visible on mobile */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f] md:hidden"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                      <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </Button>
+                  
+                  <ChatGPTModelSelector 
+                    selectedModel={selectedModel}
+                    onModelSelect={handleModelSelect}
+                  />
+                </div>
+                
+                {/* Right - New chat button (mobile only) */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-[#2f2f2f] md:hidden"
+                  onClick={() => {
+                    setMessages([])
+                    setIsTemporaryChat(false)
+                    setCurrentConversationId(null)
+                    router.push('/')
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                    <path d="M21.75 12C21.75 12.1989 21.671 12.3897 21.5303 12.5303C21.3897 12.671 21.1989 12.75 21 12.75H12.75V21C12.75 21.1989 12.671 21.3897 12.5303 21.5303C12.3897 21.671 12.1989 21.75 12 21.75C11.8011 21.75 11.6103 21.671 11.4697 21.5303C11.329 21.3897 11.25 21.1989 11.25 21V12.75H3C2.80109 12.75 2.61032 12.671 2.46967 12.5303C2.32902 12.3897 2.25 12.1989 2.25 12C2.25 11.8011 2.32902 11.6103 2.46967 11.4697C2.61032 11.329 2.80109 11.25 3 11.25H11.25V3C11.25 2.80109 11.329 2.61032 11.4697 2.46967C11.6103 2.32902 11.8011 2.25 12 2.25C12.1989 2.25 12.3897 2.32902 12.5303 2.46967C12.671 2.61032 12.75 2.80109 12.75 3V11.25H21C21.1989 11.25 21.3897 11.329 21.5303 11.4697C21.671 11.6103 21.75 11.8011 21.75 12Z" fill="currentColor"/>
+                  </svg>
+                </Button>
               </div>
             )}
+
             <ChatArea 
               messages={messages} 
               isLoading={isLoading || isEditingResponse}
